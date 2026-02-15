@@ -5,10 +5,10 @@ format:
 	poetry run ruff format .
 
 typecheck:
-	poetry run mypy src
+	poetry run mypy app
 
 test:
 	poetry run pytest
 
 run:
-	poetry run python -m ssau_schedule_bot.main
+	poetry run python -m app.entrypoints.bot_main

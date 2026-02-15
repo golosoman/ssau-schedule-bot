@@ -1,0 +1,22 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "app.entrypoints.bot_main"]
+    volumes:
+      - ./data:/app/data
+      - ./envs:/app/envs:ro
+    # Uncomment to expose metrics on the host
+    # ports:
+    #   - "8000:8000"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "app.entrypoints.worker_main"]
+    volumes:
+      - ./data:/app/data
+      - ./envs:/app/envs:ro
+    # Uncomment to expose worker metrics on the host
+    # ports:
+    #   - "8001:8000"
