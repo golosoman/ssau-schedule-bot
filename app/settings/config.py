@@ -13,6 +13,7 @@ ENV_FILES = [
     "./envs/sensitive.env",
 ]
 
+
 class RetrySettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -26,7 +27,7 @@ class RetrySettings(BaseModel):
 class SSAUAuthSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    cookie_ttl_seconds: int = 3600
+    cookie_ttl_seconds: int = 7_200
     min_login_interval_seconds: int = 10
 
 
@@ -80,7 +81,7 @@ class SecuritySettings(BaseModel):
     allow_plaintext: bool = False
 
     @model_validator(mode="after")
-    def _check_cipher(self) -> "SecuritySettings":
+    def _check_cipher(self) -> SecuritySettings:
         if not self.fernet_key and not self.allow_plaintext:
             raise ValueError(
                 "SECURITY__FERNET_KEY is required or SECURITY__ALLOW_PLAINTEXT must be true."

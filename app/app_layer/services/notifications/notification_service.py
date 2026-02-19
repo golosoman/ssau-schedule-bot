@@ -3,9 +3,9 @@ import logging
 from app.app_layer.interfaces.notifications.notifier.interface import Notifier
 from app.app_layer.interfaces.time.clock.interface import Clock
 from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.app_layer.services.notifications.notification_message import format_notification
 from app.app_layer.services.notifications.notification_planner import NotificationPlanner
-from app.domain.entities.user import User
+from app.domain.entities.users import User
+from app.domain.messages.notification import NotificationMessage
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,10 @@ class NotificationService:
         for notification in due:
             await self._notifier.send(
                 notification.user.telegram.chat_id,
-                format_notification(notification),
+                NotificationMessage(
+                    lesson=notification.lesson,
+                    lesson_start=notification.lesson_start,
+                ),
             )
             await self._planner.mark_sent(uow, notification, sent_at=now)
             sent += 1

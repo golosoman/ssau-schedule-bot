@@ -21,7 +21,7 @@ def _ensure_sqlite_path(database_url: str) -> None:
     prefix = "sqlite+aiosqlite:///"
     if not database_url.startswith(prefix):
         return
-    path_part = database_url[len(prefix):]
+    path_part = database_url[len(prefix) :]
     if not path_part or path_part == ":memory:":
         return
     Path(path_part).expanduser().parent.mkdir(parents=True, exist_ok=True)

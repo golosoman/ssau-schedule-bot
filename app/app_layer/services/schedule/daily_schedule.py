@@ -16,7 +16,8 @@ class DailyScheduleService:
         return [
             lesson
             for lesson in lessons
-            if lesson.weekday == weekday and week_number in lesson.week_numbers
+            if lesson.weekday == weekday
+            and week_number in lesson.week_numbers
             and _lesson_matches_subgroup(lesson.subgroup, subgroup)
         ]
 

@@ -8,13 +8,12 @@ from app.app_layer.interfaces.time.clock.interface import Clock
 from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
 from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
 from app.domain.entities.schedule_cache import ScheduleCache
-from app.domain.entities.user import User
+from app.domain.entities.users import User
 
 logger = logging.getLogger(__name__)
 
 
 class ScheduleSyncService:
-
     def __init__(
         self,
         provider: ScheduleProvider,
@@ -35,14 +34,14 @@ class ScheduleSyncService:
             raise ValueError("User SSAU profile is required to sync schedule.")
 
         week_number = AcademicWeekCalculator(
-            user.ssau.profile.academic_year_start
+            user.ssau.profile.profile_details.academic_year_start
         ).get_week_number(target_date)
         logger.info(
             "Sync schedule: user=%s date=%s week=%s year_start=%s",
             user.telegram.chat_id,
             target_date,
             week_number,
-            user.ssau.profile.academic_year_start,
+            user.ssau.profile.profile_details.academic_year_start,
         )
         lessons = await self._provider.fetch_week_schedule(user, week_number)
 
@@ -68,14 +67,14 @@ class ScheduleSyncService:
             raise ValueError("User SSAU profile is required to sync schedule.")
 
         week_number = AcademicWeekCalculator(
-            user.ssau.profile.academic_year_start
+            user.ssau.profile.profile_details.academic_year_start
         ).get_week_number(target_date)
         logger.info(
             "Sync check: user=%s date=%s week=%s year_start=%s",
             user.telegram.chat_id,
             target_date,
             week_number,
-            user.ssau.profile.academic_year_start,
+            user.ssau.profile.profile_details.academic_year_start,
         )
         cache = await uow.schedule_cache.get(user.id, week_number)
         if cache is None:

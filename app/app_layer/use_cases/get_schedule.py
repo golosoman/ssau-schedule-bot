@@ -6,7 +6,6 @@ from app.domain.entities.lesson import Lesson
 
 
 class GetScheduleUseCase:
-
     def __init__(
         self,
         repository: ScheduleRepository,
@@ -25,6 +24,5 @@ class GetScheduleUseCase:
         return [
             lesson
             for lesson in lessons
-            if week_number in lesson.week_numbers
-            and lesson.weekday == weekday
+            if week_number in lesson.week_numbers and lesson.weekday == weekday
         ]

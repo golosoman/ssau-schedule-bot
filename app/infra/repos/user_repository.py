@@ -2,13 +2,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.repos.user.interface import UserRepository
-from app.domain.entities.user import User
+from app.domain.entities.users import User
 from app.infra.db.models import UserModel
 from app.infra.security.password_cipher import PasswordCipher
 
 
 class SqlAlchemyUserRepository(UserRepository):
-
     def __init__(self, session: AsyncSession, password_cipher: PasswordCipher) -> None:
         self._session = session
         self._password_cipher = password_cipher
@@ -41,7 +40,4 @@ class SqlAlchemyUserRepository(UserRepository):
         result = await self._session.execute(
             select(UserModel).where(UserModel.notify_enabled.is_(True))
         )
-        return [
-            model.to_domain_entity(self._password_cipher)
-            for model in result.scalars().all()
-        ]
+        return [model.to_domain_entity(self._password_cipher) for model in result.scalars().all()]

@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.domain.entities.lesson import Lesson
-from app.domain.entities.user import User
+from app.domain.entities.users import User
 
 
 class LessonNotification(BaseModel):

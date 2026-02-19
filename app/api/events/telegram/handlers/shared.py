@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable
 
 from aiogram.types import Message
 
@@ -9,7 +9,8 @@ from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
 from app.app_layer.services.schedule.schedule_sync import ScheduleSyncService
 from app.app_layer.use_cases.register_user import RegisterUserUseCase
 from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
-from app.domain.entities.user import User
+from app.domain.entities.users import User
+from app.domain.messages.info import InfoMessage
 from app.domain.value_objects.timezone import Timezone
 
 
@@ -24,51 +25,24 @@ def user_now(now_utc: datetime, timezone: Timezone) -> datetime:
     return now_utc.astimezone(zone)
 
 
-def format_lessons(lessons: list) -> str:
-    if not lessons:
-        return "Занятий нет."
-
-    lines = []
-    for lesson in sorted(lessons, key=lambda item: item.time.start):
-        time_range = lesson.time.format_range()
-        parts = [f"{time_range} {lesson.subject}"]
-        if lesson.teacher:
-            parts.append(lesson.teacher)
-        if lesson.is_online and lesson.conference_url:
-            parts.append(lesson.conference_url)
-        lines.append(" | ".join(parts))
-
-    return "\n".join(lines)
-
-
-def format_next_lesson(start_at: datetime, lesson) -> str:
-    time_label = start_at.strftime("%Y-%m-%d %H:%M")
-    subject = lesson.subject
-    teacher = lesson.teacher or "Преподаватель не указан"
-    if lesson.is_online and lesson.conference_url:
-        return (
-            f"Следующая пара {time_label}: {subject} ({teacher})\n"
-            f"{lesson.conference_url}"
-        )
-    return f"Следующая пара {time_label}: {subject} ({teacher})"
-
-
-def format_status(user: User) -> str:
+def build_status_message(user: User) -> InfoMessage:
     profile = user.ssau.profile
-    group_label = str(profile.group_id) if profile is not None else "не определена"
-    year_label = str(profile.year_id) if profile is not None else "не определен"
-    subgroup_label = str(profile.subgroup) if profile is not None else "не определена"
+    group_label = str(profile.profile_ids.group_id) if profile is not None else "не определена"
+    year_label = str(profile.profile_ids.year_id) if profile is not None else "не определен"
+    subgroup_label = (
+        str(profile.profile_details.subgroup) if profile is not None else "не определена"
+    )
     creds = "есть" if user.ssau.credentials is not None else "нет"
     notify_status = "включены" if user.telegram.notify_enabled else "выключены"
-    return (
-        "Настройки:\n"
-        f"- группа: {group_label}\n"
-        f"- год: {year_label}\n"
-        f"- подгруппа: {subgroup_label}\n"
-        f"- тип: {profile.user_type if profile is not None else 'не определен'}\n"
-        f"- уведомления: {notify_status}\n"
-        f"- доступ: {creds}"
-    )
+    lines = [
+        f"Группа: {group_label}",
+        f"Год: {year_label}",
+        f"Подгруппа: {subgroup_label}",
+        f"Тип: {profile.profile_details.user_type if profile is not None else 'не определен'}",
+        f"Уведомления: {notify_status}",
+        f"Доступ: {creds}",
+    ]
+    return InfoMessage(title="Настройки", lines=lines)
 
 
 def extract_telegram_identity(message: Message) -> str:

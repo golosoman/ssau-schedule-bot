@@ -13,12 +13,12 @@ class Lesson(BaseModel):
     )
 
     id: int
+    type: str
     subject: str
-    teacher: str
+    teacher: str | None
     weekday: int
     week_numbers: list[int]
     time: LessonTime
     is_online: bool
     conference_url: str | None
     subgroup: int | None
-    weekly_detail: bool

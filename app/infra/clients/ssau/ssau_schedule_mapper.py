@@ -8,6 +8,7 @@ def map_schedule(data: ScheduleResponseDto) -> list[Lesson]:
 
     for item in data.lessons:
         teacher_name = item.teachers[0].name if item.teachers else ""
+        lesson_type = item.type.name
         subject = item.discipline.name
         weekday = item.weekday.id
         week_numbers = [w.week for w in item.weeks]
@@ -18,6 +19,7 @@ def map_schedule(data: ScheduleResponseDto) -> list[Lesson]:
         lessons.append(
             Lesson(
                 id=item.id,
+                type=lesson_type,
                 subject=subject,
                 teacher=teacher_name,
                 weekday=weekday,
@@ -29,7 +31,6 @@ def map_schedule(data: ScheduleResponseDto) -> list[Lesson]:
                 is_online=is_online,
                 conference_url=conference_url,
                 subgroup=subgroup,
-                weekly_detail=item.weekly_detail,
             )
         )
 

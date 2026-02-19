@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.app_layer.interfaces.schedule.upcoming_lesson.dto import UpcomingLesson
+from app.domain.constants import DAYS_IN_WEEK
 from app.domain.entities.lesson import Lesson
 from app.domain.value_objects.subgroup import Subgroup
 
@@ -19,7 +20,7 @@ class UpcomingLessonService:
         today = now_local.date()
         tz = now_local.tzinfo
 
-        for offset in range(0, 7):
+        for offset in range(DAYS_IN_WEEK):
             target_date = today + timedelta(days=offset)
             weekday = target_date.isoweekday()
             for lesson in lessons:

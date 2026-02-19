@@ -17,6 +17,11 @@ class DisciplineDto(BaseDto):
     name: str
 
 
+class LessonTypeDto(BaseDto):
+    id: int
+    name: str
+
+
 class WeekdayDto(BaseDto):
     id: int
 
@@ -41,6 +46,7 @@ class GroupDto(BaseDto):
 
 class LessonDto(BaseDto):
     id: int
+    type: LessonTypeDto
     discipline: DisciplineDto
     teachers: list[TeacherDto] = Field(default_factory=list)
     weekday: WeekdayDto

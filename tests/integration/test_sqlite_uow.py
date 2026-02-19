@@ -6,8 +6,16 @@ import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy import select
 
-from app.domain.entities.ssau_profile import SsauProfile
-from app.domain.entities.user import SsauCredentials, SsauUser, TelegramUser, User
+from app.domain.constants import DEFAULT_SUBGROUP_VALUE
+from app.domain.entities.users import (
+    SsauCredentials,
+    SsauProfile,
+    SsauProfileDetails,
+    SsauProfileIds,
+    SsauUser,
+    TelegramUser,
+    User,
+)
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
@@ -38,12 +46,16 @@ async def test_sqlite_uow_persists_user(tmp_path) -> None:
         ssau=SsauUser(
             credentials=SsauCredentials(login="login", password="secret"),
             profile=SsauProfile(
-                group_id=GroupId(value=755932538),
-                group_name="Test",
-                year_id=YearId(value=14),
-                academic_year_start=date(2025, 9, 1),
-                subgroup=Subgroup(value=1),
-                user_type="student",
+                profile_ids=SsauProfileIds(
+                    group_id=GroupId(value=755932538),
+                    year_id=YearId(value=14),
+                ),
+                profile_details=SsauProfileDetails(
+                    group_name="Test",
+                    academic_year_start=date(2025, 9, 1),
+                    subgroup=Subgroup(value=DEFAULT_SUBGROUP_VALUE),
+                    user_type="student",
+                ),
             ),
         ),
     )
@@ -58,12 +70,10 @@ async def test_sqlite_uow_persists_user(tmp_path) -> None:
     assert loaded.ssau.credentials is not None
     assert loaded.ssau.credentials.password == "secret"
     assert loaded.ssau.profile is not None
-    assert int(loaded.ssau.profile.group_id) == 755932538
+    assert int(loaded.ssau.profile.profile_ids.group_id) == 755932538
 
     async with session_factory() as session:
-        result = await session.execute(
-            select(UserModel).where(UserModel.tg_chat_id == 100)
-        )
+        result = await session.execute(select(UserModel).where(UserModel.tg_chat_id == 100))
         model = result.scalar_one()
         assert model.ssau_password.startswith("enc:")
 

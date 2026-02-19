@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 import httpx
 
 from app.app_layer.interfaces.time.clock.interface import Clock
-from app.infra.clients.ssau.auth_client import AuthClient
 from app.infra.clients.http_client import HttpClientFactory
+from app.infra.clients.ssau.auth_client import AuthClient
 from app.infra.observability.metrics import (
     RequestTimer,
     observe_ssau_request,

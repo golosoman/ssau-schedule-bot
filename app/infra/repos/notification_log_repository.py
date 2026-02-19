@@ -11,7 +11,6 @@ from app.infra.db.models import NotificationLogModel
 
 
 class SqlAlchemyNotificationLogRepository(NotificationLogRepository):
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

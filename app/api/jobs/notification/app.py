@@ -11,9 +11,7 @@ def register(scheduler: AsyncIOScheduler, settings: Settings) -> None:
     scheduler.add_job(
         run,
         id="notification",
-        trigger=IntervalTrigger(
-            seconds=settings.workers.notification_poll_interval_seconds
-        ),
+        trigger=IntervalTrigger(seconds=settings.workers.notification_poll_interval_seconds),
         next_run_time=datetime.now(timezone.utc),
         max_instances=1,
         coalesce=True,

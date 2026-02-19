@@ -1,9 +1,9 @@
 import logging
 
-from app.domain.entities.lesson import Lesson
-from app.domain.entities.user import User
-from app.app_layer.interfaces.http.ssau.interface import ScheduleProvider
 from app.app_layer.interfaces.http.ssau.dto.schedule import ScheduleResponseDto
+from app.app_layer.interfaces.http.ssau.interface import ScheduleProvider
+from app.domain.entities.lesson import Lesson
+from app.domain.entities.users import User
 from app.infra.clients.ssau.ssau_client import SSAUClient
 from app.infra.clients.ssau.ssau_schedule_mapper import map_schedule
 
@@ -27,18 +27,18 @@ class SSAUScheduleProvider(ScheduleProvider):
             "Fetching schedule: user=%s week=%s group=%s year=%s",
             user.telegram.chat_id,
             week_number,
-            user.ssau.profile.group_id.value,
-            user.ssau.profile.year_id.value,
+            user.ssau.profile.profile_ids.group_id.value,
+            user.ssau.profile.profile_ids.year_id.value,
         )
         response = await self._client.get(
             login=user.ssau.credentials.login,
             password=user.ssau.credentials.password,
             path=self._schedule_path,
             params={
-                "yearId": user.ssau.profile.year_id.value,
+                "yearId": user.ssau.profile.profile_ids.year_id.value,
                 "week": week_number,
-                "userType": user.ssau.profile.user_type,
-                "groupId": user.ssau.profile.group_id.value,
+                "userType": user.ssau.profile.profile_details.user_type,
+                "groupId": user.ssau.profile.profile_ids.group_id.value,
             },
         )
         response.raise_for_status()

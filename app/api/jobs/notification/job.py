@@ -1,5 +1,6 @@
 import logging
-from typing import Callable
+from collections.abc import Callable
+
 from dependency_injector.wiring import Provide, inject
 
 from app.api.jobs.utils import send_alert

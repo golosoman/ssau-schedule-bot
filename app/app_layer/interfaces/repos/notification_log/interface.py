@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Protocol
 from datetime import date, datetime
+from typing import Protocol
 
 
 class NotificationLogRepository(Protocol):
-    async def was_sent(self, user_id: int, lesson_id: int, lesson_date: date) -> bool:
-        ...
+    async def was_sent(self, user_id: int, lesson_id: int, lesson_date: date) -> bool: ...
 
     async def mark_sent(
         self,
@@ -14,5 +13,4 @@ class NotificationLogRepository(Protocol):
         lesson_id: int,
         lesson_date: date,
         sent_at: datetime,
-    ) -> None:
-        ...
+    ) -> None: ...

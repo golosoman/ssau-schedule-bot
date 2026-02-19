@@ -4,7 +4,6 @@ from app.domain.entities.lesson import Lesson
 
 
 class LessonDateResolver:
-
     @staticmethod
     def resolve_datetime(
         lesson: Lesson,

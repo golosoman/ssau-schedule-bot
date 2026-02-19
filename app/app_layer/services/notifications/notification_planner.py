@@ -2,18 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
 from app.app_layer.interfaces.notifications.lesson_notification.dto import (
     LessonNotification,
 )
+from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
 from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
-from app.domain.entities.user import User
+from app.domain.entities.users import User
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.timezone import Timezone
 
 
 class NotificationPlanner:
-
     def __init__(self, lead_minutes: int, timezone: Timezone) -> None:
         self._lead_minutes = lead_minutes
         self._timezone = timezone
@@ -31,7 +30,7 @@ class NotificationPlanner:
 
         now_local = self._to_local_time(now)
         week_number = AcademicWeekCalculator(
-            user.ssau.profile.academic_year_start
+            user.ssau.profile.profile_details.academic_year_start
         ).get_week_number(now_local.date())
         cache = await uow.schedule_cache.get(user.id, week_number)
         if cache is None:
@@ -46,7 +45,7 @@ class NotificationPlanner:
                 continue
             if not _lesson_matches_subgroup(
                 lesson.subgroup,
-                user.ssau.profile.subgroup,
+                user.ssau.profile.profile_details.subgroup,
             ):
                 continue
 

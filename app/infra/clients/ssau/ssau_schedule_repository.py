@@ -2,6 +2,7 @@ import httpx
 
 from app.app_layer.interfaces.http.ssau.dto.schedule import ScheduleResponseDto
 from app.app_layer.interfaces.http.ssau.interface import ScheduleRepository
+from app.domain.constants import DEFAULT_USER_TYPE
 from app.domain.entities.lesson import Lesson
 from app.infra.clients.ssau.ssau_schedule_mapper import map_schedule
 
@@ -14,7 +15,7 @@ class SSAUScheduleRepository(ScheduleRepository):
         client: httpx.AsyncClient,
         year_id: int,
         group_id: int,
-        user_type: str = "student",
+        user_type: str = DEFAULT_USER_TYPE,
     ):
         self._client = client
         self._schedule_path = self._SCHEDULE_PATH

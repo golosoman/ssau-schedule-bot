@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class AcademicWeekCalculator:
-
     def __init__(self, start_date: date):
         self._start_date = start_date
 

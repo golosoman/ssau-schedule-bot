@@ -2,7 +2,6 @@ import httpx
 
 
 class HttpClientFactory:
-
     @staticmethod
     def create(
         base_url: str,

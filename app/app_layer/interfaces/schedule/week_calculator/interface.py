@@ -5,5 +5,4 @@ from typing import Protocol
 
 
 class WeekCalculator(Protocol):
-    def get_week_number(self, target_date: date) -> int:
-        ...
+    def get_week_number(self, target_date: date) -> int: ...

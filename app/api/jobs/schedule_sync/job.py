@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable
+
 from dependency_injector.wiring import Provide, inject
 
 from app.api.jobs.utils import send_alert
@@ -28,9 +29,7 @@ def _user_now(now_utc: datetime, timezone: Timezone) -> datetime:
 async def run(
     uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
     sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    profile_use_case: SyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
-    ],
+    profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
     clock: Clock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
@@ -65,7 +64,7 @@ async def run(
                     )
                     tomorrow = now_local.date() + timedelta(days=1)
                     calculator = AcademicWeekCalculator(
-                        user.ssau.profile.academic_year_start
+                        user.ssau.profile.profile_details.academic_year_start
                     )
                     if calculator.get_week_number(tomorrow) != calculator.get_week_number(
                         now_local.date()

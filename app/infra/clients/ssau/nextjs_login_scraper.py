@@ -21,9 +21,7 @@ class NextJsLoginScraper:
         re.S,
     )
     _ACTION_ENTRY_ID_RE = re.compile(r"['\"]([a-f0-9]{40})['\"]\s*:")
-    _ACTION_ID_ASSIGN_RE = re.compile(
-        r"\$\$ACTION_\d+\.\$\$id\s*=\s*['\"]([a-f0-9]{40})['\"]"
-    )
+    _ACTION_ID_ASSIGN_RE = re.compile(r"\$\$ACTION_\d+\.\$\$id\s*=\s*['\"]([a-f0-9]{40})['\"]")
     _ACTION_ID_PROP_RE = re.compile(r"\$\$id\s*[:=]\s*['\"]([a-f0-9]{40})['\"]")
     _NEXT_F_PUSH_RE = re.compile(
         r'self\.__next_f\.push\(\[\d+,\s*("(?:\\.|[^"\\])*")\s*\]\)',

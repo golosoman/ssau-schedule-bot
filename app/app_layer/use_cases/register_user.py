@@ -1,11 +1,10 @@
-from typing import Callable
+from collections.abc import Callable
 
 from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.domain.entities.user import SsauUser, TelegramUser, User
+from app.domain.entities.users import SsauUser, TelegramUser, User
 
 
 class RegisterUserUseCase:
-
     def __init__(
         self,
         uow_factory: Callable[[], UnitOfWork],

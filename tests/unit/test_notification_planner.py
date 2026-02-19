@@ -7,10 +7,18 @@ import pytest
 
 from app.app_layer.services.notifications.notification_planner import NotificationPlanner
 from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
+from app.domain.constants import DEFAULT_SUBGROUP_VALUE
 from app.domain.entities.lesson import Lesson
 from app.domain.entities.schedule_cache import ScheduleCache
-from app.domain.entities.ssau_profile import SsauProfile
-from app.domain.entities.user import SsauCredentials, SsauUser, TelegramUser, User
+from app.domain.entities.users import (
+    SsauCredentials,
+    SsauProfile,
+    SsauProfileDetails,
+    SsauProfileIds,
+    SsauUser,
+    TelegramUser,
+    User,
+)
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.year_id import YearId
 from app.domain.value_objects.lesson_time import LessonTime
@@ -63,22 +71,27 @@ async def test_collect_due_and_mark_sent() -> None:
         ssau=SsauUser(
             credentials=SsauCredentials(login="login", password="pass"),
             profile=SsauProfile(
-                group_id=GroupId(value=755932538),
-                group_name="Test",
-                year_id=YearId(value=14),
-                academic_year_start=date(2025, 9, 1),
-                subgroup=Subgroup(value=1),
-                user_type="student",
+                profile_ids=SsauProfileIds(
+                    group_id=GroupId(value=755932538),
+                    year_id=YearId(value=14),
+                ),
+                profile_details=SsauProfileDetails(
+                    group_name="Test",
+                    academic_year_start=date(2025, 9, 1),
+                    subgroup=Subgroup(value=DEFAULT_SUBGROUP_VALUE),
+                    user_type="student",
+                ),
             ),
         ),
     )
     now_utc = datetime(2025, 9, 1, 5, 50, tzinfo=timezone.utc)
     now_local = now_utc.astimezone(Timezone(value="Europe/Samara").tzinfo())
     week_number = AcademicWeekCalculator(
-        user.ssau.profile.academic_year_start
+        user.ssau.profile.profile_details.academic_year_start
     ).get_week_number(now_local.date())
     lesson = Lesson(
         id=10,
+        type="Лекция",
         subject="Math",
         teacher="Ivanov",
         weekday=now_local.isoweekday(),
@@ -87,7 +100,6 @@ async def test_collect_due_and_mark_sent() -> None:
         is_online=False,
         conference_url=None,
         subgroup=None,
-        weekly_detail=False,
     )
     cache = ScheduleCache(
         user_id=1,

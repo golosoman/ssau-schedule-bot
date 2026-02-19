@@ -18,9 +18,7 @@ class IdMixin:
 
 class CreatedAtMixin:
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now,
-        nullable=False
+        DateTime(timezone=True), default=datetime.now, nullable=False
     )
 
 

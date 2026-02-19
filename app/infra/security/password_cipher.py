@@ -7,11 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class PasswordCipher(Protocol):
-    def encrypt(self, value: str) -> str:
-        ...
+    def encrypt(self, value: str) -> str: ...
 
-    def decrypt(self, value: str) -> str:
-        ...
+    def decrypt(self, value: str) -> str: ...
 
 
 class FernetPasswordCipher(PasswordCipher):
@@ -29,7 +27,7 @@ class FernetPasswordCipher(PasswordCipher):
             return value
         if not value.startswith(self._prefix):
             return value
-        token = value[len(self._prefix):].encode("utf-8")
+        token = value[len(self._prefix) :].encode("utf-8")
         try:
             return self._fernet.decrypt(token).decode("utf-8")
         except InvalidToken:

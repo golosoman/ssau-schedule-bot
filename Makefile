@@ -1,14 +1,22 @@
+POETRY_RUN = poetry run
+
 lint:
-	poetry run ruff check .
+	$(POETRY_RUN) ruff check .
 
 format:
-	poetry run ruff format .
+	$(POETRY_RUN) ruff format .
 
 typecheck:
-	poetry run mypy app
+	$(POETRY_RUN) mypy app
 
 test:
-	poetry run pytest
+	$(POETRY_RUN) pytest
 
-run:
+check:
+	format typecheck test
+
+run-bot:
 	poetry run python -m app.entrypoints.bot_main
+
+run-worker:
+	poetry run python -m app.entrypoints.worker_main

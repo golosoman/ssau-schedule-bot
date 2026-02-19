@@ -1,11 +1,10 @@
-from datetime import datetime, time, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.entities.lesson import Lesson
 from app.domain.entities.schedule_cache import ScheduleCache
-from app.domain.value_objects.lesson_time import LessonTime
 from app.infra.db.base import BaseTable
 
 
@@ -26,10 +25,7 @@ class ScheduleCacheModel(BaseTable):
     lessons_json: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
 
     def to_domain_entity(self) -> ScheduleCache:
-        lessons = [
-            Lesson.model_validate(item)
-            for item in self.lessons_json
-        ]
+        lessons = [Lesson.model_validate(item) for item in self.lessons_json]
 
         return ScheduleCache(
             user_id=self.user_id,
@@ -40,10 +36,7 @@ class ScheduleCacheModel(BaseTable):
 
     @classmethod
     def from_domain_entity(cls, cache: ScheduleCache) -> "ScheduleCacheModel":
-        payload = [
-            lesson.model_dump(mode="json")
-            for lesson in cache.lessons
-        ]
+        payload = [lesson.model_dump(mode="json") for lesson in cache.lessons]
 
         return cls(
             user_id=cache.user_id,
@@ -54,10 +47,7 @@ class ScheduleCacheModel(BaseTable):
 
     def apply_domain_entity(self, cache: ScheduleCache) -> None:
         self.fetched_at = cache.fetched_at
-        self.lessons_json = [
-            lesson.model_dump(mode="json")
-            for lesson in cache.lessons
-        ]
+        self.lessons_json = [lesson.model_dump(mode="json") for lesson in cache.lessons]
 
     @staticmethod
     def _ensure_aware(value: datetime) -> datetime:

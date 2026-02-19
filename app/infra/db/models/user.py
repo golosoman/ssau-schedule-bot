@@ -3,8 +3,16 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.domain.entities.ssau_profile import SsauProfile
-from app.domain.entities.user import SsauCredentials, SsauUser, TelegramUser, User
+from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
+from app.domain.entities.users import (
+    SsauCredentials,
+    SsauProfile,
+    SsauProfileDetails,
+    SsauProfileIds,
+    SsauUser,
+    TelegramUser,
+    User,
+)
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
@@ -55,12 +63,16 @@ class UserModel(BaseTable):
             if self.ssau_group_name is None:
                 raise ValueError("SSAU group name is missing for user.")
             profile = SsauProfile(
-                group_id=GroupId(value=self.ssau_group_id),
-                group_name=self.ssau_group_name,
-                year_id=YearId(value=self.ssau_year_id),
-                academic_year_start=self.academic_year_start,
-                subgroup=Subgroup(value=self.ssau_subgroup),
-                user_type=self.ssau_user_type,
+                profile_ids=SsauProfileIds(
+                    group_id=GroupId(value=self.ssau_group_id),
+                    year_id=YearId(value=self.ssau_year_id),
+                ),
+                profile_details=SsauProfileDetails(
+                    group_name=self.ssau_group_name,
+                    academic_year_start=self.academic_year_start,
+                    subgroup=Subgroup(value=self.ssau_subgroup),
+                    user_type=self.ssau_user_type,
+                ),
             )
         return User(
             id=self.id,
@@ -91,12 +103,14 @@ class UserModel(BaseTable):
             notify_enabled=user.telegram.notify_enabled,
             ssau_login=user.ssau.credentials.login if user.ssau.credentials else None,
             ssau_password=encrypted_password,
-            ssau_year_id=profile.year_id.value if profile else None,
-            ssau_group_id=profile.group_id.value if profile else None,
-            ssau_group_name=profile.group_name if profile else None,
-            ssau_subgroup=profile.subgroup.value if profile else 1,
-            ssau_user_type=profile.user_type if profile else "student",
-            academic_year_start=profile.academic_year_start if profile else None,
+            ssau_year_id=profile.profile_ids.year_id.value if profile else None,
+            ssau_group_id=profile.profile_ids.group_id.value if profile else None,
+            ssau_group_name=profile.profile_details.group_name if profile else None,
+            ssau_subgroup=(
+                profile.profile_details.subgroup.value if profile else DEFAULT_SUBGROUP_VALUE
+            ),
+            ssau_user_type=(profile.profile_details.user_type if profile else DEFAULT_USER_TYPE),
+            academic_year_start=(profile.profile_details.academic_year_start if profile else None),
         )
 
     def apply_domain_entity(self, user: User, password_cipher: PasswordCipher) -> None:
@@ -108,9 +122,11 @@ class UserModel(BaseTable):
         self.ssau_login = user.ssau.credentials.login if user.ssau.credentials else None
         self.ssau_password = encrypted_password
         profile = user.ssau.profile
-        self.ssau_year_id = profile.year_id.value if profile else None
-        self.ssau_group_id = profile.group_id.value if profile else None
-        self.ssau_group_name = profile.group_name if profile else None
-        self.ssau_subgroup = profile.subgroup.value if profile else self.ssau_subgroup
-        self.ssau_user_type = profile.user_type if profile else self.ssau_user_type
-        self.academic_year_start = profile.academic_year_start if profile else None
+        self.ssau_year_id = profile.profile_ids.year_id.value if profile else None
+        self.ssau_group_id = profile.profile_ids.group_id.value if profile else None
+        self.ssau_group_name = profile.profile_details.group_name if profile else None
+        self.ssau_subgroup = (
+            profile.profile_details.subgroup.value if profile else self.ssau_subgroup
+        )
+        self.ssau_user_type = profile.profile_details.user_type if profile else self.ssau_user_type
+        self.academic_year_start = profile.profile_details.academic_year_start if profile else None

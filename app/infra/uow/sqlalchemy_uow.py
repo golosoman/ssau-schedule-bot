@@ -22,7 +22,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
         self._session: AsyncSession | None = None
         self._committed = False
 
-    async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
+    async def __aenter__(self) -> SqlAlchemyUnitOfWork:
         self._session = self._session_factory()
         self.users = SqlAlchemyUserRepository(self._session, self._password_cipher)
         self.schedule_cache = SqlAlchemyScheduleCacheRepository(self._session)

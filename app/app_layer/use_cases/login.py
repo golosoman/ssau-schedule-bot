@@ -3,7 +3,6 @@ from app.domain.entities.auth import AuthSession
 
 
 class LoginUseCase:
-
     def __init__(self, repository: AuthRepository) -> None:
         self._repository = repository
 

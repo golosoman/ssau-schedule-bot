@@ -1,11 +1,16 @@
 import logging
 
+from app.app_layer.interfaces.http.ssau.dto.profile import GroupDto, UnifiedYearDto
 from app.app_layer.interfaces.http.ssau.interface import SSAUProfileProvider
-from app.domain.entities.ssau_profile import SsauProfile
+from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
+from app.domain.entities.users import (
+    SsauProfile,
+    SsauProfileDetails,
+    SsauProfileIds,
+)
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
-from app.app_layer.interfaces.http.ssau.dto.profile import GroupDto, UnifiedYearDto
 from app.infra.clients.ssau.ssau_client import SSAUClient
 
 logger = logging.getLogger(__name__)
@@ -44,12 +49,16 @@ class SSAUProfileHttpProvider(SSAUProfileProvider):
         )
 
         return SsauProfile(
-            group_id=GroupId(value=group.id),
-            group_name=group.name,
-            year_id=YearId(value=year.id),
-            academic_year_start=year.start_date,
-            subgroup=Subgroup(value=1),
-            user_type="student",
+            profile_ids=SsauProfileIds(
+                group_id=GroupId(value=group.id),
+                year_id=YearId(value=year.id),
+            ),
+            profile_details=SsauProfileDetails(
+                group_name=group.name,
+                academic_year_start=year.start_date,
+                subgroup=Subgroup(value=DEFAULT_SUBGROUP_VALUE),
+                user_type=DEFAULT_USER_TYPE,
+            ),
         )
 
     async def _fetch_groups(self, login: str, password: str) -> list[GroupDto]:
