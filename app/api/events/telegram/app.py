@@ -18,7 +18,7 @@ async def _set_bot_commands(bot: Bot) -> None:
         BotCommand(command="start", description="Регистрация"),
         BotCommand(command="help", description="Справка"),
         BotCommand(command="auth", description="Сохранить доступ"),
-        BotCommand(command="subgroup", description="Выбрать подгруппу"),
+        BotCommand(command="subgroup", description="Подгруппа 1|2|all"),
         BotCommand(command="status", description="Текущие настройки"),
         BotCommand(command="schedule", description="Расписание на сегодня"),
         BotCommand(command="tomorrow", description="Расписание на завтра"),

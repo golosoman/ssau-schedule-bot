@@ -23,6 +23,8 @@ class DailyScheduleService:
 
 
 def _lesson_matches_subgroup(lesson_subgroup: int | None, subgroup: Subgroup) -> bool:
+    if subgroup.is_all:
+        return True
     if lesson_subgroup is None:
         return True
     return lesson_subgroup == subgroup.value

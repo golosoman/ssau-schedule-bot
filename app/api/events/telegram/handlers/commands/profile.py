@@ -93,16 +93,23 @@ async def handle_subgroup(
     if not args:
         await notifier.send(
             message.chat.id,
-            InfoMessage(title="Использование", lines=["/subgroup 1|2"]),
+            InfoMessage(title="Использование", lines=["/subgroup 1|2|all"]),
         )
         return
 
     try:
-        subgroup = Subgroup(value=int(args[0]))
-    except ValueError:
+        raw = args[0].strip().lower()
+        if raw == "all":
+            subgroup = Subgroup.all()
+        else:
+            subgroup = Subgroup(value=int(raw))
+    except (ValueError, TypeError):
         await notifier.send(
             message.chat.id,
-            ErrorMessage(title="Неверное значение", details=["Подгруппа должна быть 1 или 2."]),
+            ErrorMessage(
+                title="Неверное значение",
+                details=["Подгруппа должна быть 1, 2 или all."],
+            ),
         )
         return
 
