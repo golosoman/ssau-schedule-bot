@@ -15,7 +15,6 @@ class HttpClientFactory:
             timeout=httpx.Timeout(timeout_seconds),
             headers={
                 "accept": "text/x-component",
-                "content-type": "text/plain;charset=UTF-8",
                 "origin": base_url,
                 "referer": f"{base_url}{login_path}",
                 "user-agent": "Mozilla/5.0",
