@@ -26,7 +26,6 @@ class AuthClient(AuthRepository):
 
     async def login(self, login: str, password: str) -> AuthSession:
         router_state, next_action = await self._fetch_login_metadata()
-        payload = [{"login": login, "password": password}, "/"]
 
         response = await self._client.post(
             self._login_path,
@@ -34,7 +33,12 @@ class AuthClient(AuthRepository):
                 "next-action": next_action,
                 "next-router-state-tree": router_state,
             },
-            content=json.dumps(payload),
+            files={
+                "1_returnUrl": (None, "/"),
+                "1_login": (None, login),
+                "1_password": (None, password),
+                "0": (None, ""),
+            },
             follow_redirects=False,
         )
         if response.is_error:
