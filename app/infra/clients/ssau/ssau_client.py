@@ -192,7 +192,7 @@ class SSAUClient:
             AuthClient._LOGIN_PATH,
             timeout_seconds=self._timeout_seconds,
         ) as client:
-            auth_client = AuthClient(client)
+            auth_client = AuthClient(client, retry_policy=self._retry_policy)
             session = await auth_client.login(login, password)
             return session.auth_cookie
 
