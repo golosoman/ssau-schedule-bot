@@ -8,33 +8,40 @@ from urllib.parse import quote
 class NextJsLoginScraper:
     DEFAULT_LOGIN_PAGE_PATH = "/api/account/logout"
     DEFAULT_FORM_STATE_KEY = "$K1"
+    _ACTION_ID_PATTERN = r"[a-fA-F0-9]{40,64}"
     _LOGIN_CHUNK_RE = re.compile(
         r'src="(/_next/static/chunks/app/account/login/page-[^"]+\.js)"',
     )
     _LOGIN_CHUNK_FALLBACK_RE = re.compile(
         r'(/_next/static/chunks/app/account/login/page-[^"\'\\]+\.js)',
     )
-    _ACTION_HASH_RE = re.compile(r"\b[a-f0-9]{40}\b")
+    _ACTION_ID_FULL_RE = re.compile(rf"{_ACTION_ID_PATTERN}")
+    _ACTION_HASH_RE = re.compile(rf"\b{_ACTION_ID_PATTERN}\b")
     _ACTION_ENTRY_RE = re.compile(
         r"__next_internal_action_entry_do_not_use__\s*=\s*{([^}]+)}",
         re.S,
     )
-    _ACTION_ENTRY_ID_RE = re.compile(r"['\"]([a-f0-9]{40})['\"]\s*:")
-    _ACTION_ID_ASSIGN_RE = re.compile(r"\$\$ACTION_\d+\.\$\$id\s*=\s*['\"]([a-f0-9]{40})['\"]")
-    _ACTION_ID_PROP_RE = re.compile(r"\$\$id\s*[:=]\s*['\"]([a-f0-9]{40})['\"]")
+    _ACTION_ENTRY_ID_RE = re.compile(rf"['\"]({_ACTION_ID_PATTERN})['\"]\s*:")
+    _ACTION_ID_ASSIGN_RE = re.compile(
+        rf"\$\$ACTION_\d+\.\$\$id\s*=\s*['\"]({_ACTION_ID_PATTERN})['\"]",
+    )
+    _ACTION_ID_PROP_RE = re.compile(
+        rf"\$\$id\s*[:=]\s*['\"]({_ACTION_ID_PATTERN})['\"]",
+    )
     _ACTION_HTML_ATTR_RE = re.compile(
-        r'\b(?:data-)?next-action=["\']([a-f0-9]{40})["\']',
+        rf'\b(?:data-)?next-action=["\']({_ACTION_ID_PATTERN})["\']',
         re.I,
     )
     _ACTION_HTML_DATA_RE = re.compile(
-        r'\bdata-action=["\']([a-f0-9]{40})["\']',
+        rf'\bdata-action=["\']({_ACTION_ID_PATTERN})["\']',
         re.I,
     )
-    _ACTION_HTML_JSON_RE = re.compile(r'"actionId"\s*:\s*"([a-f0-9]{40})"')
+    _ACTION_HTML_JSON_RE = re.compile(rf'"actionId"\s*:\s*"({_ACTION_ID_PATTERN})"')
     _NEXT_F_PUSH_RE = re.compile(
         r'self\.__next_f\.push\(\[\d+,\s*("(?:\\.|[^"\\])*")\s*\]\)',
         re.S,
     )
+    _NEXT_F_ROOT_RE = re.compile(r"(?:^|\n)0:\{")
     _FORM_STATE_KEY_RE = re.compile(r"\$K\d+")
     _INPUT_TAG_RE = re.compile(r"<input[^>]*>", re.I)
     _INPUT_NAME_RE = re.compile(r'\bname=["\']([^"\']+)["\']', re.I)
@@ -48,7 +55,7 @@ class NextJsLoginScraper:
     def extract_router_state(cls, html: str, route_path: str | None = None) -> str:
         tree = cls._extract_tree_from_text(html)
         if tree is None:
-            raise RuntimeError("initialTree not found in login HTML")
+            raise RuntimeError("router state tree not found in login HTML")
 
         normalized = cls._normalize_router_state(tree, route_path)
         return quote(
@@ -92,6 +99,10 @@ class NextJsLoginScraper:
 
     @classmethod
     def extract_next_action_from_html(cls, html_text: str) -> str | None:
+        hidden_input_action = cls._extract_next_action_from_hidden_input(html_text)
+        if hidden_input_action is not None:
+            return hidden_input_action
+
         for pattern in (
             cls._ACTION_HTML_ATTR_RE,
             cls._ACTION_HTML_DATA_RE,
@@ -110,6 +121,9 @@ class NextJsLoginScraper:
     def extract_page_path(cls, html_text: str) -> str | None:
         tree = cls._extract_tree_from_text(html_text)
         path = cls._get_page_path(tree) if tree else None
+        if path and path.startswith("/"):
+            return path
+        path = cls._extract_page_path_from_flight(html_text)
         if path and path.startswith("/"):
             return path
         for text in cls._iter_search_texts(html_text):
@@ -181,8 +195,40 @@ class NextJsLoginScraper:
         return cls._ACTION_ENTRY_ID_RE.findall(match.group(1))
 
     @classmethod
+    def _extract_next_action_from_hidden_input(cls, html_text: str) -> str | None:
+        for tag in cls._INPUT_TAG_RE.findall(html_text):
+            name_match = cls._INPUT_NAME_RE.search(tag)
+            if not name_match:
+                continue
+            field_name = name_match.group(1)
+            if not (field_name.startswith("$ACTION_") and field_name.endswith(":0")):
+                continue
+
+            value_match = cls._INPUT_VALUE_RE.search(tag)
+            if value_match is None:
+                continue
+            raw_value = value_match.group(1) or value_match.group(2) or ""
+
+            try:
+                payload = json.loads(html.unescape(raw_value))
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+
+            action_id = payload.get("id")
+            if not isinstance(action_id, str):
+                continue
+            if cls._ACTION_ID_FULL_RE.fullmatch(action_id):
+                return action_id
+        return None
+
+    @classmethod
     def _extract_tree_from_text(cls, text: str) -> list | None:
         trees: list[list] = []
+        flight_tree = cls._extract_tree_from_flight(text)
+        if flight_tree is not None:
+            trees.append(flight_tree)
         for candidate in cls._iter_search_texts(text):
             if not isinstance(candidate, str):
                 continue
@@ -231,6 +277,104 @@ class NextJsLoginScraper:
                 if depth == 0:
                     return text[idx : pos + 1]
         return None
+
+    @classmethod
+    def _extract_json_object(cls, text: str, start_idx: int) -> str | None:
+        idx = start_idx
+        while idx < len(text) and text[idx].isspace():
+            idx += 1
+        if idx >= len(text) or text[idx] != "{":
+            return None
+
+        depth = 0
+        in_string = False
+        escape = False
+        for pos in range(idx, len(text)):
+            ch = text[pos]
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                continue
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[idx : pos + 1]
+        return None
+
+    @classmethod
+    def _extract_flight_root_payload(cls, text: str) -> dict | None:
+        for candidate in cls._iter_search_texts(text):
+            if not isinstance(candidate, str):
+                continue
+            for match in cls._NEXT_F_ROOT_RE.finditer(candidate):
+                object_text = cls._extract_json_object(
+                    candidate,
+                    start_idx=match.end() - 1,
+                )
+                if object_text is None:
+                    continue
+                try:
+                    payload = json.loads(object_text)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(payload, dict):
+                    return payload
+        return None
+
+    @classmethod
+    def _extract_tree_from_flight(cls, text: str) -> list | None:
+        payload = cls._extract_flight_root_payload(text)
+        if payload is None:
+            return None
+
+        flight_frames = payload.get("f")
+        if not isinstance(flight_frames, list) or not flight_frames:
+            return None
+
+        first_frame = flight_frames[0]
+        if not isinstance(first_frame, list) or not first_frame:
+            return None
+
+        tree = first_frame[0]
+        if isinstance(tree, list):
+            return tree
+        return None
+
+    @classmethod
+    def _extract_page_path_from_flight(cls, text: str) -> str | None:
+        payload = cls._extract_flight_root_payload(text)
+        if payload is None:
+            return None
+        return cls._build_path_from_flight_segments(payload.get("c"))
+
+    @classmethod
+    def _build_path_from_flight_segments(cls, segments) -> str | None:
+        if not isinstance(segments, list):
+            return None
+
+        path_parts: list[str] = []
+        for segment in segments:
+            if not isinstance(segment, str):
+                continue
+            if not segment or segment == "__PAGE__":
+                continue
+            if segment.startswith("(") and segment.endswith(")"):
+                continue
+            if segment.startswith("@"):
+                continue
+            path_parts.append(segment)
+
+        if not path_parts:
+            return None
+        return "/" + "/".join(path_parts)
 
     @classmethod
     def _normalize_router_state(cls, tree: list, route_path: str | None) -> list:

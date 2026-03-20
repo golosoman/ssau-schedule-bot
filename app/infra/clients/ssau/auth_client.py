@@ -107,9 +107,16 @@ class AuthClient(AuthRepository):
 
         html = response.text
         form_state = self._scraper.extract_form_state(html)
+        form_state_source = "html"
         return_url = self._scraper.extract_form_value(html, "1_returnUrl")
+        return_url_field = "1_returnUrl"
+        if return_url is None:
+            return_url = self._scraper.extract_form_value(html, "returnUrl")
+            return_url_field = "returnUrl" if return_url is not None else "missing"
         page_path = self._scraper.extract_page_path(html)
+        page_path_source = "html"
         next_action = self._scraper.extract_next_action_from_html(html)
+        next_action_source = "html"
 
         need_js = (
             next_action is None
@@ -117,29 +124,70 @@ class AuthClient(AuthRepository):
             or page_path is None
             or not page_path.startswith("/")
         )
-        js_text = None
+        js_text: str | None = None
         if need_js:
-            chunk_url = self._scraper.extract_login_chunk_url(html)
-            js_response = await self._client.get(
-                chunk_url,
-                headers={"accept": "*/*"},
-            )
-            js_response.raise_for_status()
-            js_text = js_response.text
+            try:
+                chunk_url = self._scraper.extract_login_chunk_url(html)
+            except RuntimeError:
+                logger.warning(
+                    "SSAU login metadata: login chunk URL unavailable "
+                    "(next_action=%s page_path=%s form_state=%s).",
+                    next_action is not None,
+                    page_path,
+                    form_state is not None,
+                )
+            else:
+                js_response = await self._client.get(
+                    chunk_url,
+                    headers={"accept": "*/*"},
+                )
+                js_response.raise_for_status()
+                js_text = js_response.text
+                logger.info("SSAU login metadata: loaded login chunk %s", chunk_url)
 
         if next_action is None and js_text is not None:
             next_action = self._scraper.extract_next_action(js_text)
+            next_action_source = "js_chunk"
         if form_state is None and js_text is not None:
             form_state = self._scraper.extract_form_state(js_text)
+            form_state_source = "js_chunk"
         if (page_path is None or not page_path.startswith("/")) and js_text is not None:
             page_path = self._scraper.extract_page_path(js_text)
+            if page_path is not None and page_path.startswith("/"):
+                page_path_source = "js_chunk"
+
+        if next_action is None:
+            raise RuntimeError("next-action not found in login HTML/JS")
 
         page_path = page_path or self._scraper.DEFAULT_LOGIN_PAGE_PATH
+        if page_path_source == "html" and page_path == self._scraper.DEFAULT_LOGIN_PAGE_PATH:
+            page_path_source = "default"
         if not page_path.startswith("/"):
             page_path = self._login_path
+            page_path_source = "login_path_fallback"
 
-        router_state = self._scraper.extract_router_state(
-            html,
-            route_path=page_path,
+        router_state_source = "html_or_flight"
+        try:
+            router_state = self._scraper.extract_router_state(
+                html,
+                route_path=page_path,
+            )
+        except RuntimeError:
+            if js_text is None:
+                raise
+            router_state = self._scraper.extract_router_state(
+                js_text,
+                route_path=page_path,
+            )
+            router_state_source = "js_chunk"
+
+        logger.info(
+            "SSAU login metadata resolved: next_action_source=%s page_path_source=%s "
+            "router_state_source=%s form_state_source=%s return_url_field=%s",
+            next_action_source,
+            page_path_source,
+            router_state_source,
+            form_state_source,
+            return_url_field,
         )
         return router_state, next_action, form_state, return_url
