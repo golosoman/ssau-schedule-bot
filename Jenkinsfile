@@ -33,11 +33,12 @@ pipeline {
 
           echo "Sync repo on host path: ${APP_DIR}"
           docker run --rm \
+            --entrypoint /bin/sh \
             -e APP_DIR="${APP_DIR}" \
             -e REPO_URL="${REPO_URL}" \
             -e DEPLOY_BRANCH="${DEPLOY_BRANCH}" \
             -v "${APP_PARENT_DIR}:${APP_PARENT_DIR}" \
-            alpine/git:latest sh -euxc '
+            alpine/git:latest -euxc '
               if [ ! -d "${APP_DIR}/.git" ]; then
                 git clone "${REPO_URL}" "${APP_DIR}"
               fi
