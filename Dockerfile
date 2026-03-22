@@ -22,6 +22,8 @@ RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
     && poetry install --only main --no-root
 
 COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
 
 RUN poetry install --only main
 

@@ -143,7 +143,8 @@ pipeline {
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
-              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic history
+              docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
+              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic -c /app/alembic.ini history
             '
         '''
       }
@@ -168,7 +169,8 @@ pipeline {
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
-              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic current
+              docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
+              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic -c /app/alembic.ini current
             '
         '''
       }
@@ -204,7 +206,8 @@ pipeline {
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
-              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic upgrade head
+              docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
+              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic -c /app/alembic.ini upgrade head
             '
         '''
       }
@@ -229,7 +232,8 @@ pipeline {
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
-              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic downgrade -1
+              docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
+              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic -c /app/alembic.ini downgrade -1
             '
         '''
       }
@@ -255,7 +259,8 @@ pipeline {
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             -e DB_STAMP_REVISION="${DB_STAMP_REVISION}" \
             "${JENKINS_IMAGE}" sh -euxc '
-              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic stamp "${DB_STAMP_REVISION}"
+              docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
+              docker compose -f "${COMPOSE_FILE}" run --rm --no-deps "${DB_MIGRATION_SERVICE}" alembic -c /app/alembic.ini stamp "${DB_STAMP_REVISION}"
             '
         '''
       }

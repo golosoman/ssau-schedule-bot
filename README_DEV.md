@@ -74,3 +74,4 @@ poetry run alembic stamp 20260322_0001
 - `DB_MIGRATION_SERVICE`: сервис `docker-compose` для запуска миграций (`worker`/`bot`).
 - `DB_STAMP_REVISION`: ревизия для `db-stamp-initial`.
 - Для изменяющих действий (`upgrade/downgrade/stamp`) в Jenkins добавлено ручное `input`-подтверждение.
+- В migration-режимах Jenkins перед запуском команды делает `docker compose build` выбранного сервиса.
