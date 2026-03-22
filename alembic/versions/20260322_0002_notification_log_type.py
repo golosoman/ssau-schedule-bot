@@ -20,13 +20,15 @@ depends_on: Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # Safety for reruns after a failed SQLite batch migration.
+    op.execute("DROP TABLE IF EXISTS _alembic_tmp_notification_log")
+
     with op.batch_alter_table("notification_log") as batch_op:
         batch_op.add_column(
             sa.Column(
                 "notification_type",
                 sa.String(length=32),
-                nullable=False,
-                server_default="before_start",
+                nullable=True,
             )
         )
         batch_op.drop_constraint("uq_notification_once", type_="unique")
@@ -34,14 +36,41 @@ def upgrade() -> None:
             "uq_notification_once",
             ["user_id", "lesson_id", "lesson_date", "notification_type"],
         )
-        batch_op.alter_column("notification_type", server_default=None)
+
+    op.execute(
+        "UPDATE notification_log "
+        "SET notification_type = 'before_start' "
+        "WHERE notification_type IS NULL"
+    )
+
+    with op.batch_alter_table("notification_log") as batch_op:
+        batch_op.alter_column(
+            "notification_type",
+            existing_type=sa.String(length=32),
+            nullable=False,
+        )
 
 
 def downgrade() -> None:
+    # Safety for reruns after a failed SQLite batch migration.
+    op.execute("DROP TABLE IF EXISTS _alembic_tmp_notification_log")
+
     with op.batch_alter_table("notification_log") as batch_op:
         batch_op.drop_constraint("uq_notification_once", type_="unique")
+        batch_op.drop_column("notification_type")
+
+    # Downgrade restores the legacy unique key without notification_type.
+    # Keep one record per legacy key to avoid unique violations.
+    op.execute(
+        "DELETE FROM notification_log "
+        "WHERE id NOT IN ("
+        "    SELECT MIN(id) FROM notification_log "
+        "    GROUP BY user_id, lesson_id, lesson_date"
+        ")"
+    )
+
+    with op.batch_alter_table("notification_log") as batch_op:
         batch_op.create_unique_constraint(
             "uq_notification_once",
             ["user_id", "lesson_id", "lesson_date"],
         )
-        batch_op.drop_column("notification_type")
