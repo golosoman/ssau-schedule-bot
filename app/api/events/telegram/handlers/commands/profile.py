@@ -6,11 +6,25 @@ from aiogram.types import Message
 from dependency_injector.wiring import Provide, inject
 
 from app.api.events.telegram.handlers.shared import command_args, ensure_profile, load_user
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.use_cases.register_user import RegisterUserUseCase
-from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
-from app.app_layer.use_cases.update_user_credentials import UpdateUserCredentialsUseCase
-from app.app_layer.use_cases.update_user_settings import UpdateUserSettingsUseCase
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
+from app.app_layer.interfaces.use_cases.update_user_credentials.dto.input import (
+    UpdateUserCredentialsUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.update_user_credentials.interface import (
+    IUpdateUserCredentialsUseCase,
+)
+from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (
+    UpdateUserSettingsUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.update_user_settings.interface import (
+    IUpdateUserSettingsUseCase,
+)
 from app.di import Container
 from app.domain.messages.error import ErrorMessage
 from app.domain.messages.info import InfoMessage
@@ -25,12 +39,14 @@ router = Router(name="profile")
 @inject
 async def handle_auth(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    update_credentials_use_case: UpdateUserCredentialsUseCase = Provide[
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    update_credentials_use_case: IUpdateUserCredentialsUseCase = Provide[
         Container.update_user_credentials_use_case
     ],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    notifier: Notifier = Provide[Container.notifier],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     args = command_args(message)
     if len(args) < 2:
@@ -42,7 +58,15 @@ async def handle_auth(
 
     login, password = args[0], args[1]
     await load_user(message, register_use_case)
-    user = await update_credentials_use_case.execute(message.chat.id, login, password)
+    user = (
+        await update_credentials_use_case.execute(
+            UpdateUserCredentialsUseCaseInputDTO(
+                chat_id=message.chat.id,
+                login=login,
+                password=password,
+            )
+        )
+    ).user
 
     try:
         user = await ensure_profile(user, sync_profile_use_case, force=True)
@@ -82,12 +106,14 @@ async def handle_auth(
 @inject
 async def handle_subgroup(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    update_settings_use_case: UpdateUserSettingsUseCase = Provide[
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    update_settings_use_case: IUpdateUserSettingsUseCase = Provide[
         Container.update_user_settings_use_case
     ],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    notifier: Notifier = Provide[Container.notifier],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     args = command_args(message)
     if not args:
@@ -132,7 +158,12 @@ async def handle_subgroup(
             ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
         )
         return
-    await update_settings_use_case.execute(message.chat.id, subgroup=subgroup)
+    await update_settings_use_case.execute(
+        UpdateUserSettingsUseCaseInputDTO(
+            chat_id=message.chat.id,
+            subgroup=subgroup,
+        )
+    )
     await notifier.send(
         message.chat.id,
         InfoMessage(title="Подгруппа обновлена", lines=[f"Текущая подгруппа: {subgroup}."]),

@@ -91,7 +91,17 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 Группа и учебный год подтягиваются автоматически из API после `/auth`.
 Если раньше использовали `envs/.env`, перенесите секреты в `envs/sensitive.env`.
 
-База инициализируется автоматически при старте бота/воркера/REST.
+3. Применить миграции БД:
+
+```
+poetry run alembic upgrade head
+```
+
+При необходимости можно переопределить URL для миграций:
+
+```env
+ALEMBIC_DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/ssau_schedule_bot
+```
 
 ## Запуск
 
@@ -115,6 +125,15 @@ poetry run python -m app.entrypoints.api_main
 ```
 
 Health endpoints: `GET /healthz`, `GET /readyz`. Воркеры запускаются отдельным процессом.
+
+## Миграции
+
+- История: `poetry run alembic history`
+- Текущая ревизия: `poetry run alembic current`
+- Применить все: `poetry run alembic upgrade head`
+- Откатить на 1 шаг: `poetry run alembic downgrade -1`
+- Если БД уже существует в "старом" состоянии (таблицы есть, но без `notification_type`):
+  `poetry run alembic stamp 20260322_0001 && poetry run alembic upgrade head`
 
 ## Команды бота
 

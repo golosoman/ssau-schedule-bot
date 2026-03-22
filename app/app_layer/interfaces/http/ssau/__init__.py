@@ -1,13 +1,13 @@
 from app.app_layer.interfaces.http.ssau.interface import (
-    AuthRepository,
-    ScheduleProvider,
-    ScheduleRepository,
-    SSAUProfileProvider,
+    IAuthRepository,
+    IScheduleProvider,
+    IScheduleRepository,
+    ISSAUProfileProvider,
 )
 
 __all__ = [
-    "AuthRepository",
-    "ScheduleProvider",
-    "ScheduleRepository",
-    "SSAUProfileProvider",
+    "IAuthRepository",
+    "IScheduleProvider",
+    "IScheduleRepository",
+    "ISSAUProfileProvider",
 ]

@@ -1,3 +1,3 @@
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 
-__all__ = ["Notifier"]
+__all__ = ["INotifier"]

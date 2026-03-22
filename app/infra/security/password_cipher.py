@@ -1,18 +1,14 @@
 import logging
-from typing import Protocol
 
 from cryptography.fernet import Fernet, InvalidToken
+
+# Deprecated import path shim: keep exporting IPasswordCipher from this module for 1 release.
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 
 logger = logging.getLogger(__name__)
 
 
-class PasswordCipher(Protocol):
-    def encrypt(self, value: str) -> str: ...
-
-    def decrypt(self, value: str) -> str: ...
-
-
-class FernetPasswordCipher(PasswordCipher):
+class FernetPasswordCipher(IPasswordCipher):
     _prefix = "enc:"
 
     def __init__(self, key: str) -> None:
@@ -35,7 +31,7 @@ class FernetPasswordCipher(PasswordCipher):
             return ""
 
 
-class PlaintextPasswordCipher(PasswordCipher):
+class PlaintextPasswordCipher(IPasswordCipher):
     def encrypt(self, value: str) -> str:
         return value
 

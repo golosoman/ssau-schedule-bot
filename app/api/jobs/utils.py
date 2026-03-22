@@ -1,13 +1,13 @@
 import logging
 
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.domain.messages import ErrorMessage, TelegramMessage
 
 logger = logging.getLogger(__name__)
 
 
 async def send_alert(
-    notifier: Notifier | None,
+    notifier: INotifier | None,
     admin_chat_id: int | None,
     message: TelegramMessage | str,
 ) -> None:

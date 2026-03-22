@@ -1,7 +1,7 @@
 import logging
 
 from app.app_layer.interfaces.http.ssau.dto.schedule import ScheduleResponseDto
-from app.app_layer.interfaces.http.ssau.interface import ScheduleProvider
+from app.app_layer.interfaces.http.ssau.interface import IScheduleProvider
 from app.domain.entities.lesson import Lesson
 from app.domain.entities.users import User
 from app.infra.clients.ssau.ssau_client import SSAUClient
@@ -10,7 +10,7 @@ from app.infra.clients.ssau.ssau_schedule_mapper import map_schedule
 logger = logging.getLogger(__name__)
 
 
-class SSAUScheduleProvider(ScheduleProvider):
+class SSAUScheduleProvider(IScheduleProvider):
     _SCHEDULE_PATH = "/api/proxy/timetable/get-timetable"
 
     def __init__(self, client: SSAUClient) -> None:

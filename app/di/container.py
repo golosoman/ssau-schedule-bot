@@ -5,16 +5,55 @@ from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.app_layer.interfaces.http.ssau.interface import (
-    ScheduleProvider,
-    SSAUProfileProvider,
+    IScheduleProvider,
+    ISSAUProfileProvider,
 )
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.interfaces.telegram.renderer.interface import TelegramMessageRenderer
-from app.app_layer.interfaces.time.clock.interface import Clock
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
+from app.app_layer.interfaces.services.notifications.notification_planner.interface import (
+    INotificationPlannerService,
+)
+from app.app_layer.interfaces.services.notifications.notification_service.interface import (
+    INotificationService,
+)
+from app.app_layer.interfaces.services.schedule.daily_schedule.interface import (
+    IDailyScheduleService,
+)
+from app.app_layer.interfaces.services.schedule.lesson_date_resolver.interface import (
+    ILessonDateResolverService,
+)
+from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
+    IScheduleSyncService,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.interface import (
+    IUpcomingLessonService,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
+    IWeekCalculatorService,
+)
+from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
+from app.app_layer.interfaces.telegram.sender.interface import ITelegramMessageSender
+from app.app_layer.interfaces.time.clock.interface import IClock
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
+from app.app_layer.interfaces.use_cases.update_user_credentials.interface import (
+    IUpdateUserCredentialsUseCase,
+)
+from app.app_layer.interfaces.use_cases.update_user_settings.interface import (
+    IUpdateUserSettingsUseCase,
+)
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.services.notifications.notification_planner import NotificationPlanner
 from app.app_layer.services.notifications.notification_service import NotificationService
+from app.app_layer.services.schedule.daily_schedule import DailyScheduleService
+from app.app_layer.services.schedule.lesson_date_resolver import LessonDateResolver
 from app.app_layer.services.schedule.schedule_sync import ScheduleSyncService
+from app.app_layer.services.schedule.upcoming_lesson import UpcomingLessonService
+from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
 from app.app_layer.use_cases.register_user import RegisterUserUseCase
 from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
 from app.app_layer.use_cases.update_user_credentials import UpdateUserCredentialsUseCase
@@ -32,7 +71,6 @@ from app.infra.db import create_engine, create_session_factory
 from app.infra.retry import RetryPolicy
 from app.infra.security.password_cipher import (
     FernetPasswordCipher,
-    PasswordCipher,
     PlaintextPasswordCipher,
 )
 from app.infra.time.system_clock import SystemClock
@@ -65,7 +103,7 @@ def _build_retry_policy(settings: RetrySettings) -> RetryPolicy:
     )
 
 
-def _password_cipher(settings: Settings) -> PasswordCipher:
+def _password_cipher(settings: Settings) -> IPasswordCipher:
     if settings.security.fernet_key:
         return FernetPasswordCipher(settings.security.fernet_key)
     return PlaintextPasswordCipher()
@@ -77,7 +115,7 @@ def _default_timezone(settings: Settings) -> Timezone:
 
 class Container(containers.DeclarativeContainer):
     settings: providers.Provider[Settings] = providers.Singleton(get_settings)
-    clock: providers.Provider[Clock] = providers.Singleton(SystemClock)
+    clock: providers.Provider[IClock] = providers.Singleton(SystemClock)
     telegram_bot: providers.Provider[Bot] = providers.Dependency(instance_of=Bot)
     default_timezone: providers.Provider[Timezone] = providers.Singleton(
         _default_timezone,
@@ -93,11 +131,11 @@ class Container(containers.DeclarativeContainer):
         create_session_factory,
         engine=engine,
     )
-    password_cipher: providers.Provider[PasswordCipher] = providers.Singleton(
+    password_cipher: providers.Provider[IPasswordCipher] = providers.Singleton(
         _password_cipher,
         settings,
     )
-    uow: providers.Provider[UnitOfWork] = providers.Factory(
+    uow: providers.Provider[IUnitOfWork] = providers.Factory(
         SqlAlchemyUnitOfWork,
         session_factory=session_factory,
         password_cipher=password_cipher,
@@ -111,10 +149,10 @@ class Container(containers.DeclarativeContainer):
         _telegram_retry_policy,
         settings,
     )
-    telegram_renderer: providers.Provider[TelegramMessageRenderer] = providers.Singleton(
+    telegram_renderer: providers.Provider[ITelegramMessageRenderer] = providers.Singleton(
         AiogramTelegramMessageRenderer,
     )
-    telegram_sender: providers.Provider[TelegramMessageSender] = providers.Singleton(
+    telegram_sender: providers.Provider[ITelegramMessageSender] = providers.Singleton(
         TelegramMessageSender,
         bot=telegram_bot,
         retry_policy=telegram_retry_policy,
@@ -139,58 +177,79 @@ class Container(containers.DeclarativeContainer):
         timeout_seconds=providers.Callable(lambda s: s.ssau.retry.timeout_seconds, settings),
     )
 
-    schedule_provider: providers.Provider[ScheduleProvider] = providers.Factory(
+    schedule_provider: providers.Provider[IScheduleProvider] = providers.Factory(
         SSAUScheduleProvider,
         client=ssau_client,
     )
 
-    profile_provider: providers.Provider[SSAUProfileProvider] = providers.Factory(
+    profile_provider: providers.Provider[ISSAUProfileProvider] = providers.Factory(
         SSAUProfileHttpProvider,
         client=ssau_client,
     )
 
-    notifier: providers.Provider[Notifier] = providers.Factory(
+    notifier: providers.Provider[INotifier] = providers.Factory(
         TelegramNotifier,
         renderer=telegram_renderer,
         sender=telegram_sender,
     )
 
-    register_user_use_case: providers.Provider[RegisterUserUseCase] = providers.Factory(
+    register_user_use_case: providers.Provider[IRegisterUserUseCase] = providers.Factory(
         RegisterUserUseCase,
         uow_factory=uow.provider,
     )
-    update_user_credentials_use_case: providers.Provider[UpdateUserCredentialsUseCase] = (
+    update_user_credentials_use_case: providers.Provider[
+        IUpdateUserCredentialsUseCase
+    ] = (
         providers.Factory(
             UpdateUserCredentialsUseCase,
             uow_factory=uow.provider,
         )
     )
-    update_user_settings_use_case: providers.Provider[UpdateUserSettingsUseCase] = (
+    update_user_settings_use_case: providers.Provider[IUpdateUserSettingsUseCase] = (
         providers.Factory(
             UpdateUserSettingsUseCase,
             uow_factory=uow.provider,
         )
     )
-    sync_user_profile_use_case: providers.Provider[SyncUserProfileUseCase] = providers.Factory(
-        SyncUserProfileUseCase,
-        uow_factory=uow.provider,
-        profile_provider=profile_provider,
+    sync_user_profile_use_case: providers.Provider[ISyncUserProfileUseCase] = (
+        providers.Factory(
+            SyncUserProfileUseCase,
+            uow_factory=uow.provider,
+            profile_provider=profile_provider,
+        )
     )
 
-    schedule_sync_service: providers.Provider[ScheduleSyncService] = providers.Factory(
+    week_calculator_service: providers.Provider[IWeekCalculatorService] = (
+        providers.Singleton(AcademicWeekCalculator)
+    )
+    daily_schedule_service: providers.Provider[IDailyScheduleService] = (
+        providers.Singleton(DailyScheduleService)
+    )
+    upcoming_lesson_service: providers.Provider[IUpcomingLessonService] = (
+        providers.Singleton(UpcomingLessonService)
+    )
+    lesson_date_resolver_service: providers.Provider[ILessonDateResolverService] = (
+        providers.Singleton(LessonDateResolver)
+    )
+
+    schedule_sync_service: providers.Provider[IScheduleSyncService] = providers.Factory(
         ScheduleSyncService,
         provider=schedule_provider,
         clock=clock,
+        week_calculator=week_calculator_service,
     )
-    notification_planner: providers.Provider[NotificationPlanner] = providers.Singleton(
-        NotificationPlanner,
-        lead_minutes=providers.Callable(
-            lambda s: s.notifications.lead_minutes,
-            settings,
-        ),
-        timezone=default_timezone,
+    notification_planner: providers.Provider[INotificationPlannerService] = (
+        providers.Singleton(
+            NotificationPlanner,
+            lead_minutes=providers.Callable(
+                lambda s: s.notifications.lead_minutes,
+                settings,
+            ),
+            timezone=default_timezone,
+            week_calculator=week_calculator_service,
+        )
     )
-    notification_service: providers.Provider[NotificationService] = providers.Factory(
+    notification_service: providers.Provider[INotificationService] = providers.Factory(
         NotificationService,
         planner=notification_planner,
         notifier=notifier,

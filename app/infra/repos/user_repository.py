@@ -1,14 +1,14 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.app_layer.interfaces.repos.user.interface import UserRepository
+from app.app_layer.interfaces.repos.user.interface import IUserRepository
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.domain.entities.users import User
 from app.infra.db.models import UserModel
-from app.infra.security.password_cipher import PasswordCipher
 
 
-class SqlAlchemyUserRepository(UserRepository):
-    def __init__(self, session: AsyncSession, password_cipher: PasswordCipher) -> None:
+class SqlAlchemyUserRepository(IUserRepository):
+    def __init__(self, session: AsyncSession, password_cipher: IPasswordCipher) -> None:
         self._session = session
         self._password_cipher = password_cipher
 

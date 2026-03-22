@@ -8,19 +8,21 @@ except ImportError:  # pragma: no cover - compatibility shim
     except ImportError:
         TelegramUnauthorized = TelegramAPIError
 
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.interfaces.telegram.renderer.interface import TelegramMessageRenderer
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
+from app.app_layer.interfaces.telegram.sender.interface import (
+    ITelegramMessageSender,
+)
 from app.domain.messages.base import TelegramMessage
-from app.infra.clients.telegram.message_sender import TelegramMessageSender
 from app.infra.observability.metrics import observe_telegram_send
 from app.infra.observability.telemetry import get_tracer
 
 
-class TelegramNotifier(Notifier):
+class TelegramNotifier(INotifier):
     def __init__(
         self,
-        renderer: TelegramMessageRenderer,
-        sender: TelegramMessageSender,
+        renderer: ITelegramMessageRenderer,
+        sender: ITelegramMessageSender,
     ) -> None:
         self._renderer = renderer
         self._sender = sender

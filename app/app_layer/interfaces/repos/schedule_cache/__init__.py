@@ -1,5 +1,5 @@
 from app.app_layer.interfaces.repos.schedule_cache.interface import (
-    ScheduleCacheRepository,
+    IScheduleCacheRepository,
 )
 
-__all__ = ["ScheduleCacheRepository"]
+__all__ = ["IScheduleCacheRepository"]

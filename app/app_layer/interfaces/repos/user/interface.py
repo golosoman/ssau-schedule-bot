@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from app.domain.entities.users import User
 
 
-class UserRepository(Protocol):
-    async def get_by_chat_id(self, chat_id: int) -> User | None: ...
+class IUserRepository(ABC):
+    @abstractmethod
+    async def get_by_chat_id(self, chat_id: int) -> User | None:
+        raise NotImplementedError
 
-    async def upsert(self, user: User) -> User: ...
+    @abstractmethod
+    async def upsert(self, user: User) -> User:
+        raise NotImplementedError
 
-    async def list_enabled(self) -> list[User]: ...
+    @abstractmethod
+    async def list_enabled(self) -> list[User]:
+        raise NotImplementedError

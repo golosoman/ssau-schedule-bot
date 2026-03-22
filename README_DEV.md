@@ -57,4 +57,20 @@
 poetry run pytest
 poetry run ruff check .
 poetry run mypy app
+poetry run alembic upgrade head
+poetry run alembic downgrade -1
+poetry run alembic stamp 20260322_0001
 ```
+
+## Jenkins (миграции вручную)
+
+- Параметр `PIPELINE_JOB`:
+  - `deploy`
+  - `db-history`
+  - `db-current`
+  - `db-upgrade-head`
+  - `db-downgrade-1`
+  - `db-stamp-initial`
+- `DB_MIGRATION_SERVICE`: сервис `docker-compose` для запуска миграций (`worker`/`bot`).
+- `DB_STAMP_REVISION`: ревизия для `db-stamp-initial`.
+- Для изменяющих действий (`upgrade/downgrade/stamp`) в Jenkins добавлено ручное `input`-подтверждение.

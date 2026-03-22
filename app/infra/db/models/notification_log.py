@@ -1,6 +1,14 @@
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.entities.notification_log import NotificationLog
@@ -14,6 +22,7 @@ class NotificationLogModel(BaseTable):
             "user_id",
             "lesson_id",
             "lesson_date",
+            "notification_type",
             name="uq_notification_once",
         ),
     )
@@ -26,6 +35,7 @@ class NotificationLogModel(BaseTable):
     )
     lesson_id: Mapped[int] = mapped_column(Integer, nullable=False)
     lesson_date: Mapped[date] = mapped_column(Date, nullable=False)
+    notification_type: Mapped[str] = mapped_column(String(32), nullable=False)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     def to_domain_entity(self) -> NotificationLog:
@@ -33,6 +43,7 @@ class NotificationLogModel(BaseTable):
             user_id=self.user_id,
             lesson_id=self.lesson_id,
             lesson_date=self.lesson_date,
+            notification_type=self.notification_type,
             sent_at=self.sent_at,
         )
 
@@ -42,5 +53,6 @@ class NotificationLogModel(BaseTable):
             user_id=log.user_id,
             lesson_id=log.lesson_id,
             lesson_date=log.lesson_date,
+            notification_type=log.notification_type,
             sent_at=log.sent_at,
         )

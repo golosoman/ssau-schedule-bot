@@ -2,7 +2,7 @@ import logging
 
 import httpx
 
-from app.app_layer.interfaces.http.ssau.interface import AuthRepository
+from app.app_layer.interfaces.http.ssau.interface import IAuthRepository
 from app.domain.entities.auth import AuthSession
 from app.infra.clients.ssau.nextjs_login_scraper import (
     NextJsLoginScraper,
@@ -12,7 +12,7 @@ from app.infra.retry import RetryPolicy, RetryableError, retry_async
 logger = logging.getLogger(__name__)
 
 
-class AuthClient(AuthRepository):
+class AuthClient(IAuthRepository):
     _LOGIN_PATH = "/account/login"
     _RETRY_STATUSES = {429, 500, 502, 503, 504}
 

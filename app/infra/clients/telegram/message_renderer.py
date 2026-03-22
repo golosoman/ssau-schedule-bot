@@ -20,13 +20,13 @@ from app.app_layer.interfaces.telegram.renderer.dto import (
     RenderedTelegramMessage,
     TelegramEntity,
 )
-from app.app_layer.interfaces.telegram.renderer.interface import TelegramMessageRenderer
+from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
 from app.domain.entities.lesson import Lesson
 from app.domain.messages import ErrorMessage, InfoMessage, NotificationMessage, ScheduleMessage
 from app.domain.messages.base import TelegramMessage
 
 
-class AiogramTelegramMessageRenderer(TelegramMessageRenderer):
+class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
     def render(self, message: TelegramMessage) -> RenderedTelegramMessage:
         if isinstance(message, ScheduleMessage):
             return self._render_schedule(message)

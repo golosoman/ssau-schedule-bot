@@ -24,6 +24,7 @@ dependencies = [
     "uvicorn (>=0.41.0,<0.42.0)",
     "apscheduler (>=3.11.2,<4.0.0)",
     "tenacity (>=9.1.4,<10.0.0)",
+    "alembic (>=1.17.2,<2.0.0)",
 ]
 
 [tool.poetry]

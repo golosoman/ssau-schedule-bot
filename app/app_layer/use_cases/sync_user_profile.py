@@ -1,25 +1,37 @@
 import logging
 from collections.abc import Callable
 
-from app.app_layer.interfaces.http.ssau.interface import SSAUProfileProvider
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
+from app.app_layer.interfaces.http.ssau.interface import ISSAUProfileProvider
+from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
+    SyncUserProfileUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.dto.output import (
+    SyncUserProfileUseCaseOutputDTO,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
-from app.domain.entities.users import User
 from app.domain.value_objects.subgroup import Subgroup
 
 logger = logging.getLogger(__name__)
 
 
-class SyncUserProfileUseCase:
+class SyncUserProfileUseCase(ISyncUserProfileUseCase):
     def __init__(
         self,
-        uow_factory: Callable[[], UnitOfWork],
-        profile_provider: SSAUProfileProvider,
+        uow_factory: Callable[[], IUnitOfWork],
+        profile_provider: ISSAUProfileProvider,
     ) -> None:
         self._uow_factory = uow_factory
         self._profile_provider = profile_provider
 
-    async def execute(self, user: User) -> User:
+    async def execute(
+        self,
+        input_dto: SyncUserProfileUseCaseInputDTO,
+    ) -> SyncUserProfileUseCaseOutputDTO:
+        user = input_dto.user
         if user.ssau.credentials is None:
             raise RuntimeError("User credentials are required to sync profile.")
 
@@ -56,4 +68,4 @@ class SyncUserProfileUseCase:
         logger.info("SSAU year updated: %s", profile.profile_ids.year_id)
 
         async with self._uow_factory() as uow:
-            return await uow.users.upsert(user)
+            return SyncUserProfileUseCaseOutputDTO(user=await uow.users.upsert(user))

@@ -1,5 +1,5 @@
 from app.app_layer.interfaces.repos.notification_log.interface import (
-    NotificationLogRepository,
+    INotificationLogRepository,
 )
 
-__all__ = ["NotificationLogRepository"]
+__all__ = ["INotificationLogRepository"]

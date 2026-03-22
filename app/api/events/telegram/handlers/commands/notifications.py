@@ -15,15 +15,36 @@ from app.api.events.telegram.handlers.shared import (
     sync_cache,
     user_now,
 )
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.interfaces.time.clock.interface import Clock
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.app_layer.services.schedule.schedule_sync import ScheduleSyncService
-from app.app_layer.services.schedule.upcoming_lesson import UpcomingLessonService
-from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
-from app.app_layer.use_cases.register_user import RegisterUserUseCase
-from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
-from app.app_layer.use_cases.update_user_settings import UpdateUserSettingsUseCase
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
+    IScheduleSyncService,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.input import (
+    UpcomingLessonServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.interface import (
+    IUpcomingLessonService,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+    WeekCalculatorServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
+    IWeekCalculatorService,
+)
+from app.app_layer.interfaces.time.clock.interface import IClock
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
+from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (
+    UpdateUserSettingsUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.update_user_settings.interface import (
+    IUpdateUserSettingsUseCase,
+)
 from app.di import Container
 from app.domain.constants import DAYS_IN_WEEK
 from app.domain.messages.error import ErrorMessage
@@ -41,11 +62,11 @@ router = Router(name="notifications")
 @inject
 async def handle_notify(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    update_settings_use_case: UpdateUserSettingsUseCase = Provide[
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    update_settings_use_case: IUpdateUserSettingsUseCase = Provide[
         Container.update_user_settings_use_case
     ],
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     args = command_args(message)
     if not args or args[0] not in {"on", "off"}:
@@ -57,7 +78,12 @@ async def handle_notify(
 
     enabled = args[0] == "on"
     await load_user(message, register_use_case)
-    await update_settings_use_case.execute(message.chat.id, notify_enabled=enabled)
+    await update_settings_use_case.execute(
+        UpdateUserSettingsUseCaseInputDTO(
+            chat_id=message.chat.id,
+            notify_enabled=enabled,
+        )
+    )
 
     await notifier.send(
         message.chat.id,
@@ -72,14 +98,20 @@ async def handle_notify(
 @inject
 async def handle_notify_test(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
-    clock: Clock = Provide[Container.clock],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    upcoming_lesson_service: IUpcomingLessonService = Provide[
+        Container.upcoming_lesson_service
+    ],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
+    clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
 
@@ -130,15 +162,20 @@ async def handle_notify_test(
             ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
         )
         return
-    week_number = AcademicWeekCalculator(
-        profile.profile_details.academic_year_start
-    ).get_week_number(now_local.date())
-    next_lesson = UpcomingLessonService.find_next(
-        cache.lessons,
-        now_local,
-        week_number,
-        profile.profile_details.subgroup,
-    )
+    week_number = week_calculator.get_week_number(
+        WeekCalculatorServiceInputDTO(
+            start_date=profile.profile_details.academic_year_start,
+            target_date=now_local.date(),
+        )
+    ).week_number
+    next_lesson = upcoming_lesson_service.find_next(
+        UpcomingLessonServiceInputDTO(
+            lessons=cache.lessons,
+            now_local=now_local,
+            week_number=week_number,
+            subgroup=profile.profile_details.subgroup,
+        )
+    ).upcoming_lesson
 
     if next_lesson is None:
         days_until_monday = (DAYS_IN_WEEK + 1) - now_local.isoweekday()
@@ -155,15 +192,20 @@ async def handle_notify_test(
             next_week_local,
             max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
         )
-        next_week_number = AcademicWeekCalculator(
-            profile.profile_details.academic_year_start
-        ).get_week_number(next_week_date)
-        next_lesson = UpcomingLessonService.find_next(
-            cache.lessons,
-            next_week_local,
-            next_week_number,
-            profile.profile_details.subgroup,
-        )
+        next_week_number = week_calculator.get_week_number(
+            WeekCalculatorServiceInputDTO(
+                start_date=profile.profile_details.academic_year_start,
+                target_date=next_week_date,
+            )
+        ).week_number
+        next_lesson = upcoming_lesson_service.find_next(
+            UpcomingLessonServiceInputDTO(
+                lessons=cache.lessons,
+                now_local=next_week_local,
+                week_number=next_week_number,
+                subgroup=profile.profile_details.subgroup,
+            )
+        ).upcoming_lesson
 
     if next_lesson is None:
         await notifier.send(

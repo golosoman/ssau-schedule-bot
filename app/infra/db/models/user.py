@@ -16,8 +16,8 @@ from app.domain.entities.users import (
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.infra.db.base import BaseTable
-from app.infra.security.password_cipher import PasswordCipher
 
 
 class UserModel(BaseTable):
@@ -46,7 +46,7 @@ class UserModel(BaseTable):
         nullable=False,
     )
 
-    def to_domain_entity(self, password_cipher: PasswordCipher) -> User:
+    def to_domain_entity(self, password_cipher: IPasswordCipher) -> User:
         credentials = None
         if self.ssau_login and self.ssau_password:
             credentials = SsauCredentials(
@@ -91,7 +91,7 @@ class UserModel(BaseTable):
     def from_domain_entity(
         cls,
         user: User,
-        password_cipher: PasswordCipher,
+        password_cipher: IPasswordCipher,
     ) -> "UserModel":
         encrypted_password = None
         if user.ssau.credentials is not None:
@@ -113,7 +113,7 @@ class UserModel(BaseTable):
             academic_year_start=(profile.profile_details.academic_year_start if profile else None),
         )
 
-    def apply_domain_entity(self, user: User, password_cipher: PasswordCipher) -> None:
+    def apply_domain_entity(self, user: User, password_cipher: IPasswordCipher) -> None:
         encrypted_password = None
         if user.ssau.credentials is not None:
             encrypted_password = password_cipher.encrypt(user.ssau.credentials.password)

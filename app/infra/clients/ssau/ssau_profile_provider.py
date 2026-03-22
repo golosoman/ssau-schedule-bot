@@ -1,7 +1,7 @@
 import logging
 
 from app.app_layer.interfaces.http.ssau.dto.profile import GroupDto, UnifiedYearDto
-from app.app_layer.interfaces.http.ssau.interface import SSAUProfileProvider
+from app.app_layer.interfaces.http.ssau.interface import ISSAUProfileProvider
 from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
 from app.domain.entities.users import (
     SsauProfile,
@@ -16,7 +16,7 @@ from app.infra.clients.ssau.ssau_client import SSAUClient
 logger = logging.getLogger(__name__)
 
 
-class SSAUProfileHttpProvider(SSAUProfileProvider):
+class SSAUProfileHttpProvider(ISSAUProfileProvider):
     _GROUPS_PATH = "/api/proxy/personal/groups"
     _DICTIONARIES_PATH = "/api/proxy/dictionaries"
     _DICTIONARIES_SLUG = "unified_years"

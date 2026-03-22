@@ -1,11 +1,11 @@
 from app.infra.security.password_cipher import (
     FernetPasswordCipher,
-    PasswordCipher,
+    IPasswordCipher,
     PlaintextPasswordCipher,
 )
 
 __all__ = [
     "FernetPasswordCipher",
-    "PasswordCipher",
+    "IPasswordCipher",
     "PlaintextPasswordCipher",
 ]

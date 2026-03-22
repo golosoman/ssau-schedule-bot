@@ -1,3 +1,3 @@
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 
-__all__ = ["UnitOfWork"]
+__all__ = ["IUnitOfWork"]

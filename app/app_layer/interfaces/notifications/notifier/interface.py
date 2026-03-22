@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from app.domain.messages.base import TelegramMessage
 
 
-class Notifier(Protocol):
-    async def send(self, chat_id: int, message: TelegramMessage) -> None: ...
+class INotifier(ABC):
+    @abstractmethod
+    async def send(self, chat_id: int, message: TelegramMessage) -> None:
+        raise NotImplementedError

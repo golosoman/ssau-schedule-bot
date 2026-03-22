@@ -4,8 +4,10 @@ from aiogram.types import Message
 from dependency_injector.wiring import Provide, inject
 
 from app.api.events.telegram.handlers.shared import build_status_message, load_user
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.use_cases.register_user import RegisterUserUseCase
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
 from app.di import Container
 from app.domain.messages.info import InfoMessage
 
@@ -16,8 +18,8 @@ router = Router(name="system")
 @inject
 async def handle_start(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    notifier: Notifier = Provide[Container.notifier],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     await load_user(message, register_use_case)
     await notifier.send(
@@ -36,7 +38,7 @@ async def handle_start(
 @inject
 async def handle_help(
     message: Message,
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     await notifier.send(
         message.chat.id,
@@ -62,8 +64,8 @@ async def handle_help(
 @inject
 async def handle_status(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    notifier: Notifier = Provide[Container.notifier],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
     await notifier.send(message.chat.id, build_status_message(user))

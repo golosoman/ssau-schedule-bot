@@ -1,3 +1,3 @@
-from app.app_layer.interfaces.schedule.week_calculator.interface import WeekCalculator
+from app.app_layer.interfaces.schedule.week_calculator.interface import IWeekCalculator
 
-__all__ = ["WeekCalculator"]
+__all__ = ["IWeekCalculator"]

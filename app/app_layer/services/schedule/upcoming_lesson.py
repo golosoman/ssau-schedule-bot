@@ -3,19 +3,29 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.app_layer.interfaces.schedule.upcoming_lesson.dto import UpcomingLesson
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.input import (
+    UpcomingLessonServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.output import (
+    UpcomingLessonServiceOutputDTO,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.interface import (
+    IUpcomingLessonService,
+)
 from app.domain.constants import DAYS_IN_WEEK
-from app.domain.entities.lesson import Lesson
 from app.domain.value_objects.subgroup import Subgroup
 
 
-class UpcomingLessonService:
-    @staticmethod
+class UpcomingLessonService(IUpcomingLessonService):
     def find_next(
-        lessons: list[Lesson],
-        now_local: datetime,
-        week_number: int,
-        subgroup: Subgroup,
-    ) -> UpcomingLesson | None:
+        self,
+        input_dto: UpcomingLessonServiceInputDTO,
+    ) -> UpcomingLessonServiceOutputDTO:
+        lessons = input_dto.lessons
+        now_local = input_dto.now_local
+        week_number = input_dto.week_number
+        subgroup = input_dto.subgroup
+
         candidates: list[UpcomingLesson] = []
         today = now_local.date()
         tz = now_local.tzinfo
@@ -36,9 +46,11 @@ class UpcomingLessonService:
                 candidates.append(UpcomingLesson(lesson=lesson, start_at=start_at))
 
         if not candidates:
-            return None
+            return UpcomingLessonServiceOutputDTO(upcoming_lesson=None)
 
-        return min(candidates, key=lambda item: item.start_at)
+        return UpcomingLessonServiceOutputDTO(
+            upcoming_lesson=min(candidates, key=lambda item: item.start_at)
+        )
 
 
 def _lesson_matches_subgroup(lesson_subgroup: int | None, subgroup: Subgroup) -> bool:

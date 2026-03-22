@@ -5,10 +5,26 @@ from datetime import datetime, timedelta
 
 from aiogram.types import Message
 
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.app_layer.services.schedule.schedule_sync import ScheduleSyncService
-from app.app_layer.use_cases.register_user import RegisterUserUseCase
-from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+    ScheduleSyncForUserInputDTO,
+    ScheduleSyncIfStaleInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
+    IScheduleSyncService,
+)
+from app.app_layer.interfaces.use_cases.register_user.dto.input import (
+    RegisterUserUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
+    SyncUserProfileUseCaseInputDTO,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.entities.users import User
 from app.domain.messages.info import InfoMessage
 from app.domain.value_objects.timezone import Timezone
@@ -61,14 +77,21 @@ def credentials_missing(user: User) -> bool:
     return user.ssau.credentials is None
 
 
-async def load_user(message: Message, use_case: RegisterUserUseCase) -> User:
+async def load_user(message: Message, use_case: IRegisterUserUseCase) -> User:
     display_name = extract_telegram_identity(message)
-    return await use_case.execute(message.chat.id, display_name)
+    return (
+        await use_case.execute(
+            RegisterUserUseCaseInputDTO(
+                chat_id=message.chat.id,
+                display_name=display_name,
+            )
+        )
+    ).user
 
 
 async def ensure_profile(
     user: User,
-    use_case: SyncUserProfileUseCase,
+    use_case: ISyncUserProfileUseCase,
     *,
     force: bool = False,
 ) -> User:
@@ -76,12 +99,12 @@ async def ensure_profile(
         raise RuntimeError("Credentials are required to sync profile.")
     if not force and user.ssau.profile is not None:
         return user
-    return await use_case.execute(user)
+    return (await use_case.execute(SyncUserProfileUseCaseInputDTO(user=user))).user
 
 
 async def sync_cache(
-    uow_factory: Callable[[], UnitOfWork],
-    sync_service: ScheduleSyncService,
+    uow_factory: Callable[[], IUnitOfWork],
+    sync_service: IScheduleSyncService,
     user: User,
     target_date: datetime,
     *,
@@ -90,10 +113,22 @@ async def sync_cache(
 ):
     async with uow_factory() as uow:
         if force or max_age is None:
-            return await sync_service.sync_for_user(uow, user, target_date.date())
-        return await sync_service.sync_if_stale(
-            uow,
-            user,
-            target_date.date(),
-            max_age,
-        )
+            return (
+                await sync_service.sync_for_user(
+                    ScheduleSyncForUserInputDTO(
+                        uow=uow,
+                        user=user,
+                        target_date=target_date.date(),
+                    )
+                )
+            ).cache
+        return (
+            await sync_service.sync_if_stale(
+                ScheduleSyncIfStaleInputDTO(
+                    uow=uow,
+                    user=user,
+                    target_date=target_date.date(),
+                    max_age=max_age,
+                )
+            )
+        ).cache

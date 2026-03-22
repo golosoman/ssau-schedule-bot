@@ -1,3 +1,3 @@
-from app.app_layer.interfaces.time.clock.interface import Clock
+from app.app_layer.interfaces.time.clock.interface import IClock
 
-__all__ = ["Clock"]
+__all__ = ["IClock"]

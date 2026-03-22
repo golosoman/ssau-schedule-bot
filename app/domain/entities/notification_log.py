@@ -11,4 +11,5 @@ class NotificationLog(BaseModel):
     user_id: int
     lesson_id: int
     lesson_date: date
+    notification_type: str
     sent_at: datetime

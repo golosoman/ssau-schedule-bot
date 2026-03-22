@@ -1,25 +1,51 @@
 from __future__ import annotations
 
-from typing import Protocol
+from abc import ABC, abstractmethod
+from types import TracebackType
+from typing import Self
 
 from app.app_layer.interfaces.repos.notification_log.interface import (
-    NotificationLogRepository,
+    INotificationLogRepository,
 )
 from app.app_layer.interfaces.repos.schedule_cache.interface import (
-    ScheduleCacheRepository,
+    IScheduleCacheRepository,
 )
-from app.app_layer.interfaces.repos.user.interface import UserRepository
+from app.app_layer.interfaces.repos.user.interface import IUserRepository
 
 
-class UnitOfWork(Protocol):
-    users: UserRepository
-    schedule_cache: ScheduleCacheRepository
-    notification_log: NotificationLogRepository
+class IUnitOfWork(ABC):
+    @property
+    @abstractmethod
+    def users(self) -> IUserRepository:
+        raise NotImplementedError
 
-    async def __aenter__(self) -> UnitOfWork: ...
+    @property
+    @abstractmethod
+    def schedule_cache(self) -> IScheduleCacheRepository:
+        raise NotImplementedError
 
-    async def __aexit__(self, exc_type, exc, tb) -> None: ...
+    @property
+    @abstractmethod
+    def notification_log(self) -> INotificationLogRepository:
+        raise NotImplementedError
 
-    async def commit(self) -> None: ...
+    @abstractmethod
+    async def __aenter__(self) -> Self:
+        raise NotImplementedError
 
-    async def rollback(self) -> None: ...
+    @abstractmethod
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def commit(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def rollback(self) -> None:
+        raise NotImplementedError

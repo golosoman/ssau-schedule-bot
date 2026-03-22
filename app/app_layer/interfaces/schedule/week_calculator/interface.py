@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from datetime import date
-from typing import Protocol
+
+# Deprecated compatibility contract: prefer
+# `app.app_layer.interfaces.services.schedule.week_calculator.interface`.
 
 
-class WeekCalculator(Protocol):
-    def get_week_number(self, target_date: date) -> int: ...
+class IWeekCalculator(ABC):
+    @abstractmethod
+    def get_week_number(self, target_date: date) -> int:
+        raise NotImplementedError

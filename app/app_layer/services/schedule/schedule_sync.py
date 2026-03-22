@@ -1,41 +1,62 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from app.app_layer.interfaces.http.ssau.interface import ScheduleProvider
-from app.app_layer.interfaces.time.clock.interface import Clock
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
+from app.app_layer.interfaces.http.ssau.interface import IScheduleProvider
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+    ScheduleSyncForUserInputDTO,
+    ScheduleSyncIfStaleInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto.output import (
+    ScheduleSyncForUserOutputDTO,
+    ScheduleSyncIfStaleOutputDTO,
+)
+from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
+    IScheduleSyncService,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+    WeekCalculatorServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
+    IWeekCalculatorService,
+)
+from app.app_layer.interfaces.time.clock.interface import IClock
 from app.domain.entities.schedule_cache import ScheduleCache
-from app.domain.entities.users import User
 
 logger = logging.getLogger(__name__)
 
 
-class ScheduleSyncService:
+class ScheduleSyncService(IScheduleSyncService):
     def __init__(
         self,
-        provider: ScheduleProvider,
-        clock: Clock,
+        provider: IScheduleProvider,
+        clock: IClock,
+        week_calculator: IWeekCalculatorService,
     ) -> None:
         self._provider = provider
         self._clock = clock
+        self._week_calculator = week_calculator
 
     async def sync_for_user(
         self,
-        uow: UnitOfWork,
-        user: User,
-        target_date: date,
-    ) -> ScheduleCache:
+        input_dto: ScheduleSyncForUserInputDTO,
+    ) -> ScheduleSyncForUserOutputDTO:
+        uow = input_dto.uow
+        user = input_dto.user
+        target_date = input_dto.target_date
+
         if user.id is None:
             raise ValueError("User ID is required to store schedule cache.")
         if user.ssau.profile is None:
             raise ValueError("User SSAU profile is required to sync schedule.")
 
-        week_number = AcademicWeekCalculator(
-            user.ssau.profile.profile_details.academic_year_start
-        ).get_week_number(target_date)
+        week_number = self._week_calculator.get_week_number(
+            WeekCalculatorServiceInputDTO(
+                start_date=user.ssau.profile.profile_details.academic_year_start,
+                target_date=target_date,
+            )
+        ).week_number
         logger.info(
             "Sync schedule: user=%s date=%s week=%s year_start=%s",
             user.telegram.chat_id,
@@ -52,23 +73,28 @@ class ScheduleSyncService:
             lessons=lessons,
         )
         await uow.schedule_cache.upsert(cache)
-        return cache
+        return ScheduleSyncForUserOutputDTO(cache=cache)
 
     async def sync_if_stale(
         self,
-        uow: UnitOfWork,
-        user: User,
-        target_date: date,
-        max_age: timedelta,
-    ) -> ScheduleCache:
+        input_dto: ScheduleSyncIfStaleInputDTO,
+    ) -> ScheduleSyncIfStaleOutputDTO:
+        uow = input_dto.uow
+        user = input_dto.user
+        target_date = input_dto.target_date
+        max_age = input_dto.max_age
+
         if user.id is None:
             raise ValueError("User ID is required to store schedule cache.")
         if user.ssau.profile is None:
             raise ValueError("User SSAU profile is required to sync schedule.")
 
-        week_number = AcademicWeekCalculator(
-            user.ssau.profile.profile_details.academic_year_start
-        ).get_week_number(target_date)
+        week_number = self._week_calculator.get_week_number(
+            WeekCalculatorServiceInputDTO(
+                start_date=user.ssau.profile.profile_details.academic_year_start,
+                target_date=target_date,
+            )
+        ).week_number
         logger.info(
             "Sync check: user=%s date=%s week=%s year_start=%s",
             user.telegram.chat_id,
@@ -78,14 +104,28 @@ class ScheduleSyncService:
         )
         cache = await uow.schedule_cache.get(user.id, week_number)
         if cache is None:
-            return await self.sync_for_user(uow, user, target_date)
+            synced = await self.sync_for_user(
+                ScheduleSyncForUserInputDTO(
+                    uow=uow,
+                    user=user,
+                    target_date=target_date,
+                )
+            )
+            return ScheduleSyncIfStaleOutputDTO(cache=synced.cache)
 
         now = self._ensure_aware(self._clock.now())
         fetched_at = self._ensure_aware(cache.fetched_at)
         if now - fetched_at < max_age:
-            return cache
+            return ScheduleSyncIfStaleOutputDTO(cache=cache)
 
-        return await self.sync_for_user(uow, user, target_date)
+        synced = await self.sync_for_user(
+            ScheduleSyncForUserInputDTO(
+                uow=uow,
+                user=user,
+                target_date=target_date,
+            )
+        )
+        return ScheduleSyncIfStaleOutputDTO(cache=synced.cache)
 
     @staticmethod
     def _ensure_aware(value: datetime) -> datetime:

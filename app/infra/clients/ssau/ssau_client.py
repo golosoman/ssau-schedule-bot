@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import httpx
 
-from app.app_layer.interfaces.time.clock.interface import Clock
+from app.app_layer.interfaces.time.clock.interface import IClock
 from app.infra.clients.http_client import HttpClientFactory
 from app.infra.clients.ssau.auth_client import AuthClient
 from app.infra.observability.metrics import (
@@ -30,7 +30,7 @@ class AuthSessionCache:
         *,
         ttl_seconds: int,
         min_login_interval_seconds: int,
-        clock: Clock,
+        clock: IClock,
     ) -> None:
         self._ttl = timedelta(seconds=ttl_seconds)
         self._min_login_interval = timedelta(seconds=min_login_interval_seconds)

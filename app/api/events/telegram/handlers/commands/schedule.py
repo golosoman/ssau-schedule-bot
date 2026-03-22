@@ -14,16 +14,38 @@ from app.api.events.telegram.handlers.shared import (
     sync_cache,
     user_now,
 )
-from app.app_layer.interfaces.notifications.notifier.interface import Notifier
-from app.app_layer.interfaces.telegram.renderer.interface import TelegramMessageRenderer
-from app.app_layer.interfaces.time.clock.interface import Clock
-from app.app_layer.interfaces.uow.unit_of_work.interface import UnitOfWork
-from app.app_layer.services.schedule.daily_schedule import DailyScheduleService
-from app.app_layer.services.schedule.schedule_sync import ScheduleSyncService
-from app.app_layer.services.schedule.upcoming_lesson import UpcomingLessonService
-from app.app_layer.services.schedule.week_calculator import AcademicWeekCalculator
-from app.app_layer.use_cases.register_user import RegisterUserUseCase
-from app.app_layer.use_cases.sync_user_profile import SyncUserProfileUseCase
+from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.services.schedule.daily_schedule.dto.input import (
+    DailyScheduleServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.daily_schedule.interface import (
+    IDailyScheduleService,
+)
+from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
+    IScheduleSyncService,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.input import (
+    UpcomingLessonServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.interface import (
+    IUpcomingLessonService,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+    WeekCalculatorServiceInputDTO,
+)
+from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
+    IWeekCalculatorService,
+)
+from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
+from app.app_layer.interfaces.telegram.sender.interface import ITelegramMessageSender
+from app.app_layer.interfaces.time.clock.interface import IClock
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
+from app.app_layer.interfaces.use_cases.register_user.interface import (
+    IRegisterUserUseCase,
+)
+from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
+    ISyncUserProfileUseCase,
+)
 from app.di import Container
 from app.domain.constants import DAYS_IN_WEEK
 from app.domain.messages.error import ErrorMessage
@@ -32,7 +54,6 @@ from app.domain.messages.notification import NotificationMessage
 from app.domain.messages.schedule import ScheduleMessage
 from app.domain.value_objects.timezone import Timezone
 from app.infra.clients.telegram.keyboard_builder import TelegramKeyboardBuilder
-from app.infra.clients.telegram.message_sender import TelegramMessageSender
 from app.settings.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -44,14 +65,20 @@ router = Router(name="schedule")
 @inject
 async def handle_schedule(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
-    clock: Clock = Provide[Container.clock],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    daily_schedule_service: IDailyScheduleService = Provide[
+        Container.daily_schedule_service
+    ],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
+    clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
 
@@ -102,15 +129,20 @@ async def handle_schedule(
             ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
         )
         return
-    week_number = AcademicWeekCalculator(
-        profile.profile_details.academic_year_start
-    ).get_week_number(now_local.date())
-    daily_lessons = DailyScheduleService.filter_for_date(
-        cache.lessons,
-        now_local.date(),
-        week_number,
-        profile.profile_details.subgroup,
-    )
+    week_number = week_calculator.get_week_number(
+        WeekCalculatorServiceInputDTO(
+            start_date=profile.profile_details.academic_year_start,
+            target_date=now_local.date(),
+        )
+    ).week_number
+    daily_lessons = daily_schedule_service.filter_for_date(
+        DailyScheduleServiceInputDTO(
+            lessons=cache.lessons,
+            target_date=now_local.date(),
+            week_number=week_number,
+            subgroup=profile.profile_details.subgroup,
+        )
+    ).lessons
 
     await notifier.send(
         message.chat.id,
@@ -126,14 +158,20 @@ async def handle_schedule(
 @inject
 async def handle_tomorrow(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
-    clock: Clock = Provide[Container.clock],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    daily_schedule_service: IDailyScheduleService = Provide[
+        Container.daily_schedule_service
+    ],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
+    clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
 
@@ -185,15 +223,20 @@ async def handle_tomorrow(
             ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
         )
         return
-    week_number = AcademicWeekCalculator(
-        profile.profile_details.academic_year_start
-    ).get_week_number(target_date)
-    daily_lessons = DailyScheduleService.filter_for_date(
-        cache.lessons,
-        target_date,
-        week_number,
-        profile.profile_details.subgroup,
-    )
+    week_number = week_calculator.get_week_number(
+        WeekCalculatorServiceInputDTO(
+            start_date=profile.profile_details.academic_year_start,
+            target_date=target_date,
+        )
+    ).week_number
+    daily_lessons = daily_schedule_service.filter_for_date(
+        DailyScheduleServiceInputDTO(
+            lessons=cache.lessons,
+            target_date=target_date,
+            week_number=week_number,
+            subgroup=profile.profile_details.subgroup,
+        )
+    ).lessons
 
     await notifier.send(
         message.chat.id,
@@ -209,16 +252,22 @@ async def handle_tomorrow(
 @inject
 async def handle_next(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
-    clock: Clock = Provide[Container.clock],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    upcoming_lesson_service: IUpcomingLessonService = Provide[
+        Container.upcoming_lesson_service
+    ],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
+    clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
-    notifier: Notifier = Provide[Container.notifier],
-    renderer: TelegramMessageRenderer = Provide[Container.telegram_renderer],
-    sender: TelegramMessageSender = Provide[Container.telegram_sender],
+    notifier: INotifier = Provide[Container.notifier],
+    renderer: ITelegramMessageRenderer = Provide[Container.telegram_renderer],
+    sender: ITelegramMessageSender = Provide[Container.telegram_sender],
 ) -> None:
     user = await load_user(message, register_use_case)
 
@@ -269,15 +318,20 @@ async def handle_next(
             ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
         )
         return
-    week_number = AcademicWeekCalculator(
-        profile.profile_details.academic_year_start
-    ).get_week_number(now_local.date())
-    next_lesson = UpcomingLessonService.find_next(
-        cache.lessons,
-        now_local,
-        week_number,
-        profile.profile_details.subgroup,
-    )
+    week_number = week_calculator.get_week_number(
+        WeekCalculatorServiceInputDTO(
+            start_date=profile.profile_details.academic_year_start,
+            target_date=now_local.date(),
+        )
+    ).week_number
+    next_lesson = upcoming_lesson_service.find_next(
+        UpcomingLessonServiceInputDTO(
+            lessons=cache.lessons,
+            now_local=now_local,
+            week_number=week_number,
+            subgroup=profile.profile_details.subgroup,
+        )
+    ).upcoming_lesson
 
     if next_lesson is None:
         days_until_monday = (DAYS_IN_WEEK + 1) - now_local.isoweekday()
@@ -294,15 +348,20 @@ async def handle_next(
             next_week_local,
             max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
         )
-        next_week_number = AcademicWeekCalculator(
-            profile.profile_details.academic_year_start
-        ).get_week_number(next_week_date)
-        next_lesson = UpcomingLessonService.find_next(
-            cache.lessons,
-            next_week_local,
-            next_week_number,
-            profile.profile_details.subgroup,
-        )
+        next_week_number = week_calculator.get_week_number(
+            WeekCalculatorServiceInputDTO(
+                start_date=profile.profile_details.academic_year_start,
+                target_date=next_week_date,
+            )
+        ).week_number
+        next_lesson = upcoming_lesson_service.find_next(
+            UpcomingLessonServiceInputDTO(
+                lessons=cache.lessons,
+                now_local=next_week_local,
+                week_number=next_week_number,
+                subgroup=profile.profile_details.subgroup,
+            )
+        ).upcoming_lesson
 
     if next_lesson is None:
         await notifier.send(
@@ -327,14 +386,16 @@ async def handle_next(
 @inject
 async def handle_sync(
     message: Message,
-    register_use_case: RegisterUserUseCase = Provide[Container.register_user_use_case],
-    sync_profile_use_case: SyncUserProfileUseCase = Provide[Container.sync_user_profile_use_case],
-    sync_service: ScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], UnitOfWork] = Provide[Container.uow.provider],
-    clock: Clock = Provide[Container.clock],
+    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    sync_profile_use_case: ISyncUserProfileUseCase = Provide[
+        Container.sync_user_profile_use_case
+    ],
+    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
+    clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
     settings: Settings = Provide[Container.settings],
-    notifier: Notifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
 

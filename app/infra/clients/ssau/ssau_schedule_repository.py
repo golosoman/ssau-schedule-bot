@@ -1,13 +1,13 @@
 import httpx
 
 from app.app_layer.interfaces.http.ssau.dto.schedule import ScheduleResponseDto
-from app.app_layer.interfaces.http.ssau.interface import ScheduleRepository
+from app.app_layer.interfaces.http.ssau.interface import IScheduleRepository
 from app.domain.constants import DEFAULT_USER_TYPE
 from app.domain.entities.lesson import Lesson
 from app.infra.clients.ssau.ssau_schedule_mapper import map_schedule
 
 
-class SSAUScheduleRepository(ScheduleRepository):
+class SSAUScheduleRepository(IScheduleRepository):
     _SCHEDULE_PATH = "/api/proxy/timetable/get-timetable"
 
     def __init__(

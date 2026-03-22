@@ -2,13 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.repos.schedule_cache.interface import (
-    ScheduleCacheRepository,
+    IScheduleCacheRepository,
 )
 from app.domain.entities.schedule_cache import ScheduleCache
 from app.infra.db.models import ScheduleCacheModel
 
 
-class SqlAlchemyScheduleCacheRepository(ScheduleCacheRepository):
+class SqlAlchemyScheduleCacheRepository(IScheduleCacheRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

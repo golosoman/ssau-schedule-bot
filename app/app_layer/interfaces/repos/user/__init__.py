@@ -1,3 +1,3 @@
-from app.app_layer.interfaces.repos.user.interface import UserRepository
+from app.app_layer.interfaces.repos.user.interface import IUserRepository
 
-__all__ = ["UserRepository"]
+__all__ = ["IUserRepository"]

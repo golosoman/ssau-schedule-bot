@@ -11,6 +11,9 @@ from app.app_layer.interfaces.telegram.renderer.dto import (
     RenderedTelegramMessage,
     TelegramEntity,
 )
+from app.app_layer.interfaces.telegram.sender.interface import (
+    ITelegramMessageSender,
+)
 from app.domain.constants import TELEGRAM_MESSAGE_MAX_LENGTH
 from app.infra.clients.telegram.message_splitter import split_message
 from app.infra.retry import RetryPolicy, retry_async
@@ -18,7 +21,7 @@ from app.infra.retry import RetryPolicy, retry_async
 logger = logging.getLogger(__name__)
 
 
-class TelegramMessageSender:
+class TelegramMessageSender(ITelegramMessageSender):
     def __init__(self, bot: Bot, retry_policy: RetryPolicy) -> None:
         self._bot = bot
         self._retry_policy = retry_policy
