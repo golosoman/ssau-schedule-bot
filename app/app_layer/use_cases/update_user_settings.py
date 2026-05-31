@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (
     UpdateUserSettingsUseCaseInputDTO,
 )
@@ -9,7 +10,6 @@ from app.app_layer.interfaces.use_cases.update_user_settings.dto.output import (
 from app.app_layer.interfaces.use_cases.update_user_settings.interface import (
     IUpdateUserSettingsUseCase,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 
 
 class UpdateUserSettingsUseCase(IUpdateUserSettingsUseCase):

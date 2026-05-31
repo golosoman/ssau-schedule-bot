@@ -3,6 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
 from app.domain.entities.users import (
     SsauCredentials,
@@ -16,7 +17,6 @@ from app.domain.entities.users import (
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
-from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.infra.db.base import BaseTable
 
 

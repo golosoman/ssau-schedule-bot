@@ -2,6 +2,7 @@ import logging
 from collections.abc import Callable
 
 from app.app_layer.interfaces.http.ssau.interface import ISSAUProfileProvider
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
     SyncUserProfileUseCaseInputDTO,
 )
@@ -11,7 +12,6 @@ from app.app_layer.interfaces.use_cases.sync_user_profile.dto.output import (
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
     ISyncUserProfileUseCase,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.constants import DEFAULT_SUBGROUP_VALUE, DEFAULT_USER_TYPE
 from app.domain.value_objects.subgroup import Subgroup
 

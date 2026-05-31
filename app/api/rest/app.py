@@ -6,11 +6,11 @@ from app.di import Container
 from app.infra.observability.metrics import start_metrics_server
 from app.infra.observability.telemetry import configure_telemetry
 from app.logging.config import configure_logging
+from app.settings.config import settings
 
 
 def create_app() -> FastAPI:
     container = Container()
-    settings = container.settings()
     configure_logging(settings)
     configure_telemetry(settings)
     if settings.metrics.enabled:

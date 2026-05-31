@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.app_layer.interfaces.notifications.lesson_notification.dto import (
     LessonNotification,
@@ -124,7 +124,7 @@ class NotificationPlanner(INotificationPlannerService):
         notification = input_dto.notification
         if notification.user.id is None:
             return
-        sent_at = input_dto.sent_at or datetime.now(timezone.utc)
+        sent_at = input_dto.sent_at or datetime.now(UTC)
         await uow.notification_log.mark_sent(
             user_id=notification.user.id,
             lesson_id=notification.lesson.id,

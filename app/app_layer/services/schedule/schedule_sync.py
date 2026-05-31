@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.app_layer.interfaces.http.ssau.interface import IScheduleProvider
 from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
@@ -130,5 +130,5 @@ class ScheduleSyncService(IScheduleSyncService):
     @staticmethod
     def _ensure_aware(value: datetime) -> datetime:
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value

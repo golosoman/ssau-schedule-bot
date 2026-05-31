@@ -1,10 +1,9 @@
 import uvicorn
 
-from app.settings.config import get_settings
+from app.settings.config import settings
 
 
 def main() -> None:
-    settings = get_settings()
     uvicorn.run(
         "app.api.rest.app:create_app",
         factory=True,

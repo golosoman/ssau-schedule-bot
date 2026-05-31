@@ -51,7 +51,7 @@ from app.domain.messages.error import ErrorMessage
 from app.domain.messages.info import InfoMessage
 from app.domain.messages.notification import NotificationMessage
 from app.domain.value_objects.timezone import Timezone
-from app.settings.config import Settings
+from app.settings.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,6 @@ async def handle_notify_test(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)

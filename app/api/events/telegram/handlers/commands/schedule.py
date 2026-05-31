@@ -54,7 +54,7 @@ from app.domain.messages.notification import NotificationMessage
 from app.domain.messages.schedule import ScheduleMessage
 from app.domain.value_objects.timezone import Timezone
 from app.infra.clients.telegram.keyboard_builder import TelegramKeyboardBuilder
-from app.settings.config import Settings
+from app.settings.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,6 @@ async def handle_schedule(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
@@ -170,7 +169,6 @@ async def handle_tomorrow(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)
@@ -264,7 +262,6 @@ async def handle_next(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
     renderer: ITelegramMessageRenderer = Provide[Container.telegram_renderer],
     sender: ITelegramMessageSender = Provide[Container.telegram_sender],
@@ -394,7 +391,6 @@ async def handle_sync(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     user = await load_user(message, register_use_case)

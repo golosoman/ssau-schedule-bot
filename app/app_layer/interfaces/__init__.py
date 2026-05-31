@@ -5,7 +5,6 @@ from app.app_layer.interfaces.http.ssau.interface import (
     ISSAUProfileProvider,
 )
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
-from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.app_layer.interfaces.repos.notification_log.interface import (
     INotificationLogRepository,
 )
@@ -13,6 +12,7 @@ from app.app_layer.interfaces.repos.schedule_cache.interface import (
     IScheduleCacheRepository,
 )
 from app.app_layer.interfaces.repos.user.interface import IUserRepository
+from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
 from app.app_layer.interfaces.telegram.sender.interface import ITelegramMessageSender
 from app.app_layer.interfaces.time.clock.interface import IClock

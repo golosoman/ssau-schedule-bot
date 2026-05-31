@@ -19,8 +19,12 @@ from app.domain.entities.users import (
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
-from app.infra.db import create_engine, create_session_factory
-from app.infra.db import models  # noqa: F401
+from app.infra.db import (
+    DatabaseEngineSettings,
+    create_engine,
+    create_session_factory,
+    models,  # noqa: F401
+)
 from app.infra.db.base import Base
 from app.infra.db.models import UserModel
 from app.infra.security.password_cipher import FernetPasswordCipher
@@ -30,7 +34,7 @@ from app.infra.uow import SqlAlchemyUnitOfWork
 @pytest.mark.asyncio
 async def test_sqlite_uow_persists_user(tmp_path) -> None:
     db_path = tmp_path / "test.db"
-    engine = create_engine(f"sqlite+aiosqlite:///{db_path}")
+    engine = create_engine(DatabaseEngineSettings(url=f"sqlite+aiosqlite:///{db_path}"))
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     session_factory = create_session_factory(engine)

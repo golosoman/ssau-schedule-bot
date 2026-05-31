@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
 
 from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
     WeekCalculatorServiceInputDTO,

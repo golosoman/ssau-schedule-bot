@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.register_user.dto.input import (
     RegisterUserUseCaseInputDTO,
 )
@@ -9,7 +10,6 @@ from app.app_layer.interfaces.use_cases.register_user.dto.output import (
 from app.app_layer.interfaces.use_cases.register_user.interface import (
     IRegisterUserUseCase,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.entities.users import SsauUser, TelegramUser, User
 
 

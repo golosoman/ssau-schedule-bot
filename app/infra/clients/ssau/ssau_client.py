@@ -8,12 +8,13 @@ import httpx
 from app.app_layer.interfaces.time.clock.interface import IClock
 from app.infra.clients.http_client import HttpClientFactory
 from app.infra.clients.ssau.auth_client import AuthClient
+from app.infra.clients.ssau.settings import AuthCacheSettings, SSAUClientSettings
 from app.infra.observability.metrics import (
     RequestTimer,
     observe_ssau_request,
 )
 from app.infra.observability.telemetry import get_tracer
-from app.infra.retry import RetryPolicy, RetryableError, retry_async
+from app.infra.retry import RetryableError, RetryPolicy, retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +29,10 @@ class AuthSessionCache:
     def __init__(
         self,
         *,
-        ttl_seconds: int,
-        min_login_interval_seconds: int,
+        settings: AuthCacheSettings,
         clock: IClock,
     ) -> None:
-        self._ttl = timedelta(seconds=ttl_seconds)
-        self._min_login_interval = timedelta(seconds=min_login_interval_seconds)
+        self._settings = settings
         self._clock = clock
         self._lock = asyncio.Lock()
         self._entries: dict[str, AuthCacheEntry] = {}
@@ -58,7 +57,7 @@ class AuthSessionCache:
 
             self._last_login_at[login] = self._clock.now()
             cookie = await login_func(login, password)
-            expires_at = self._clock.now() + self._ttl
+            expires_at = self._clock.now() + timedelta(seconds=self._settings.ttl_seconds)
             self._entries[login] = AuthCacheEntry(
                 auth_cookie=cookie,
                 expires_at=expires_at,
@@ -72,10 +71,11 @@ class AuthSessionCache:
         last_login = self._last_login_at.get(login)
         if last_login is None:
             return
+        min_login_interval = timedelta(seconds=self._settings.min_login_interval_seconds)
         elapsed = now - last_login
-        if elapsed >= self._min_login_interval:
+        if elapsed >= min_login_interval:
             return
-        wait_for = (self._min_login_interval - elapsed).total_seconds()
+        wait_for = (min_login_interval - elapsed).total_seconds()
         logger.info("SSAU login throttled for %.2fs", wait_for)
         await asyncio.sleep(wait_for)
 
@@ -84,15 +84,13 @@ class SSAUClient:
     def __init__(
         self,
         *,
-        base_url: str,
+        settings: SSAUClientSettings,
         auth_cache: AuthSessionCache,
         retry_policy: RetryPolicy,
-        timeout_seconds: float,
     ) -> None:
-        self._base_url = base_url
+        self._settings = settings
         self._auth_cache = auth_cache
         self._retry_policy = retry_policy
-        self._timeout_seconds = timeout_seconds
 
     async def get(
         self,
@@ -120,9 +118,9 @@ class SSAUClient:
         params: dict | None = None,
     ) -> httpx.Response:
         async with HttpClientFactory.create(
-            self._base_url,
+            self._settings.base_url,
             AuthClient._LOGIN_PATH,
-            timeout_seconds=self._timeout_seconds,
+            timeout_seconds=self._settings.timeout_seconds,
         ) as client:
             cookie = await self._auth_cache.get_or_refresh(
                 login,
@@ -188,9 +186,9 @@ class SSAUClient:
 
     async def _login(self, login: str, password: str) -> str:
         async with HttpClientFactory.create(
-            self._base_url,
+            self._settings.base_url,
             AuthClient._LOGIN_PATH,
-            timeout_seconds=self._timeout_seconds,
+            timeout_seconds=self._settings.timeout_seconds,
         ) as client:
             auth_client = AuthClient(client, retry_policy=self._retry_policy)
             session = await auth_client.login(login, password)

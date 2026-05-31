@@ -30,7 +30,7 @@ from app.di import Container
 from app.domain.value_objects.timezone import Timezone
 from app.infra.observability.metrics import observe_schedule_sync, observe_worker_error
 from app.logging.config import reset_request_id, set_request_id
-from app.settings.config import Settings
+from app.settings.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,6 @@ async def run(
     week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
     clock: IClock = Provide[Container.clock],
     timezone: Timezone = Provide[Container.default_timezone],
-    settings: Settings = Provide[Container.settings],
     notifier: INotifier = Provide[Container.notifier],
 ) -> None:
     alert_notifier = notifier if settings.alerts.enabled else None

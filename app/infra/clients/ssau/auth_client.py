@@ -7,7 +7,7 @@ from app.domain.entities.auth import AuthSession
 from app.infra.clients.ssau.nextjs_login_scraper import (
     NextJsLoginScraper,
 )
-from app.infra.retry import RetryPolicy, RetryableError, retry_async
+from app.infra.retry import RetryableError, RetryPolicy, retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,8 @@ class AuthClient(IAuthRepository):
             try:
                 if response.status_code in self._RETRY_STATUSES:
                     logger.warning(
-                        "SSAU login retryable status: status=%s next_action=%s router_state=%s return_url=%s form_state=%s",
+                        "SSAU login retryable status: status=%s next_action=%s "
+                        "router_state=%s return_url=%s form_state=%s",
                         response.status_code,
                         next_action,
                         router_state,
@@ -68,7 +69,8 @@ class AuthClient(IAuthRepository):
                     raise RetryableError(f"SSAU login retryable status: {response.status_code}")
                 if response.is_error:
                     logger.error(
-                        "SSAU login failed: status=%s next_action=%s router_state=%s return_url=%s form_state=%s",
+                        "SSAU login failed: status=%s next_action=%s "
+                        "router_state=%s return_url=%s form_state=%s",
                         response.status_code,
                         next_action,
                         router_state,

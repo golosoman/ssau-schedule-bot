@@ -12,6 +12,7 @@ from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
 )
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.register_user.dto.input import (
     RegisterUserUseCaseInputDTO,
 )
@@ -24,7 +25,6 @@ from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
     ISyncUserProfileUseCase,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.entities.users import User
 from app.domain.messages.info import InfoMessage
 from app.domain.value_objects.timezone import Timezone

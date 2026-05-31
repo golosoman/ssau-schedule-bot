@@ -15,7 +15,7 @@ from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.di import Container
 from app.infra.observability.metrics import observe_worker_error
 from app.logging.config import reset_request_id, set_request_id
-from app.settings.config import Settings
+from app.settings.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ async def run(
     uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
     notifier: INotifier = Provide[Container.notifier],
     service: INotificationService = Provide[Container.notification_service],
-    settings: Settings = Provide[Container.settings],
 ) -> None:
     alert_notifier = notifier if settings.alerts.enabled else None
     admin_chat_id = settings.alerts.admin_chat_id if settings.alerts.enabled else None

@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.update_user_credentials.dto.input import (
     UpdateUserCredentialsUseCaseInputDTO,
 )
@@ -9,7 +10,6 @@ from app.app_layer.interfaces.use_cases.update_user_credentials.dto.output impor
 from app.app_layer.interfaces.use_cases.update_user_credentials.interface import (
     IUpdateUserCredentialsUseCase,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.domain.entities.users import SsauCredentials
 
 

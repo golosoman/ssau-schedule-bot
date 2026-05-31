@@ -7,10 +7,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.infra.db.settings import DatabaseEngineSettings
 
-def create_engine(database_url: str) -> AsyncEngine:
-    _ensure_sqlite_path(database_url)
-    return create_async_engine(database_url, echo=False, future=True)
+
+def create_engine(settings: DatabaseEngineSettings) -> AsyncEngine:
+    _ensure_sqlite_path(settings.url)
+    return create_async_engine(settings.url, echo=settings.echo, future=True)
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

@@ -1,10 +1,10 @@
+from app.app_layer.interfaces.http.ssau.interface import IScheduleRepository
 from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
     WeekCalculatorServiceInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
     IWeekCalculatorService,
 )
-from app.app_layer.interfaces.http.ssau.interface import IScheduleRepository
 from app.app_layer.interfaces.use_cases.get_schedule.dto.input import GetScheduleUseCaseInputDTO
 from app.app_layer.interfaces.use_cases.get_schedule.dto.output import GetScheduleUseCaseOutputDTO
 from app.app_layer.interfaces.use_cases.get_schedule.interface import IGetScheduleUseCase

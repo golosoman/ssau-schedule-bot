@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from types import SimpleNamespace
 
 import pytest
@@ -27,10 +27,10 @@ from app.domain.entities.users import (
     User,
 )
 from app.domain.value_objects.group_id import GroupId
-from app.domain.value_objects.year_id import YearId
 from app.domain.value_objects.lesson_time import LessonTime
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.timezone import Timezone
+from app.domain.value_objects.year_id import YearId
 
 
 class FakeScheduleCacheRepository:
@@ -100,7 +100,7 @@ async def test_collect_due_and_mark_sent() -> None:
             ),
         ),
     )
-    now_utc = datetime(2025, 9, 1, 5, 50, tzinfo=timezone.utc)
+    now_utc = datetime(2025, 9, 1, 5, 50, tzinfo=UTC)
     now_local = now_utc.astimezone(Timezone(value="Europe/Samara").tzinfo())
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
@@ -193,7 +193,7 @@ async def test_collect_due_sends_start_notification_once() -> None:
             ),
         ),
     )
-    pre_start_utc = datetime(2025, 9, 1, 5, 50, tzinfo=timezone.utc)
+    pre_start_utc = datetime(2025, 9, 1, 5, 50, tzinfo=UTC)
     pre_start_local = pre_start_utc.astimezone(Timezone(value="Europe/Samara").tzinfo())
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
@@ -243,7 +243,7 @@ async def test_collect_due_sends_start_notification_once() -> None:
         )
     )
 
-    lesson_start_utc = datetime(2025, 9, 1, 6, 0, tzinfo=timezone.utc)
+    lesson_start_utc = datetime(2025, 9, 1, 6, 0, tzinfo=UTC)
     at_start_due = (
         await planner.collect_due(
             NotificationPlannerCollectDueInputDTO(

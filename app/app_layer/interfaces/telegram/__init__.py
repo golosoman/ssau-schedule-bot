@@ -1,7 +1,7 @@
 from app.app_layer.interfaces.telegram.renderer import (
+    ITelegramMessageRenderer,
     RenderedTelegramMessage,
     TelegramEntity,
-    ITelegramMessageRenderer,
 )
 from app.app_layer.interfaces.telegram.sender import ITelegramMessageSender
 

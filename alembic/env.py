@@ -5,10 +5,10 @@ from logging.config import fileConfig
 from os import getenv
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from app.infra.db import models  # noqa: F401
 from app.infra.db.base import Base
 
@@ -20,12 +20,13 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/ssau_schedule_bot.db"
+ENV = getenv("ENV", "local")
+# Mirror app.settings.config: select the profile via ENV (sensitive + common + <ENV>.env),
+# later files overriding earlier ones.
 ENV_FILES = (
-    "envs/common.env",
-    "envs/local.env",
-    "envs/dev.env",
-    "envs/prod.env",
     "envs/sensitive.env",
+    "envs/common.env",
+    f"envs/{ENV}.env",
 )
 
 
