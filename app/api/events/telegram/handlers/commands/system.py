@@ -3,12 +3,12 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from dependency_injector.wiring import Provide, inject
 
-from app.api.events.telegram.handlers.shared import build_status_message, load_user
+from app.api.events.telegram.handlers.shared import build_status_message, load_account
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.app_layer.interfaces.use_cases.register_user.interface import (
     IRegisterUserUseCase,
 )
-from app.di import Container
+from app.di.container import Container
 from app.domain.messages.info import InfoMessage
 
 router = Router(name="system")
@@ -18,10 +18,10 @@ router = Router(name="system")
 @inject
 async def handle_start(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
-    notifier: INotifier = Provide[Container.notifier],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    await load_user(message, register_use_case)
+    await load_account(message, register_use_case)
     await notifier.send(
         message.chat.id,
         InfoMessage(
@@ -38,7 +38,7 @@ async def handle_start(
 @inject
 async def handle_help(
     message: Message,
-    notifier: INotifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
     await notifier.send(
         message.chat.id,
@@ -64,8 +64,8 @@ async def handle_help(
 @inject
 async def handle_status(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
-    notifier: INotifier = Provide[Container.notifier],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    user = await load_user(message, register_use_case)
-    await notifier.send(message.chat.id, build_status_message(user))
+    account = await load_account(message, register_use_case)
+    await notifier.send(message.chat.id, build_status_message(account))

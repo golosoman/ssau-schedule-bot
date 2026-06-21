@@ -1,9 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.domain.entities.users import User
+from app.app_layer.interfaces.repos.account.dto import AccountView
 
 
 class SyncUserProfileUseCaseOutputDTO(BaseModel):
-    model_config = ConfigDict(extra="ignore", validate_assignment=True)
+    model_config = ConfigDict(frozen=True)
 
-    user: User
+    account: AccountView

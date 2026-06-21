@@ -1,5 +1,3 @@
-import logging
-from collections.abc import Callable
 from datetime import datetime, time, timedelta
 
 from aiogram import Router
@@ -10,7 +8,7 @@ from dependency_injector.wiring import Provide, inject
 from app.api.events.telegram.handlers.shared import (
     credentials_missing,
     ensure_profile,
-    load_user,
+    load_account,
     sync_cache,
     user_now,
 )
@@ -39,14 +37,13 @@ from app.app_layer.interfaces.services.schedule.week_calculator.interface import
 from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
 from app.app_layer.interfaces.telegram.sender.interface import ITelegramMessageSender
 from app.app_layer.interfaces.time.clock.interface import IClock
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.register_user.interface import (
     IRegisterUserUseCase,
 )
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
     ISyncUserProfileUseCase,
 )
-from app.di import Container
+from app.di.container import Container
 from app.domain.constants import DAYS_IN_WEEK
 from app.domain.messages.error import ErrorMessage
 from app.domain.messages.info import InfoMessage
@@ -54,9 +51,9 @@ from app.domain.messages.notification import NotificationMessage
 from app.domain.messages.schedule import ScheduleMessage
 from app.domain.value_objects.timezone import Timezone
 from app.infra.clients.telegram.keyboard_builder import TelegramKeyboardBuilder
-from app.settings.config import settings
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = Router(name="schedule")
 
@@ -65,23 +62,21 @@ router = Router(name="schedule")
 @inject
 async def handle_schedule(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     sync_profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
+        Container.usecases.sync_user_profile_use_case
     ],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.services.week_calculator_service],
     daily_schedule_service: IDailyScheduleService = Provide[
-        Container.daily_schedule_service
+        Container.services.daily_schedule_service
     ],
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    user = await load_user(message, register_use_case)
-
-    if credentials_missing(user):
+    account = await load_account(message, register_use_case)
+    if credentials_missing(account):
         await notifier.send(
             message.chat.id,
             ErrorMessage(
@@ -92,15 +87,12 @@ async def handle_schedule(
         return
 
     try:
-        user = await ensure_profile(user, sync_profile_use_case)
+        account = await ensure_profile(account, sync_profile_use_case)
         now_local = user_now(clock.now(), timezone)
     except ValueError:
         await notifier.send(
             message.chat.id,
-            ErrorMessage(
-                title="Некорректная таймзона",
-                details=["Сообщи администратору."],
-            ),
+            ErrorMessage(title="Некорректная таймзона", details=["Сообщи администратору."]),
         )
         return
     except Exception:
@@ -114,14 +106,8 @@ async def handle_schedule(
         )
         return
 
-    cache = await sync_cache(
-        uow_factory,
-        sync_service,
-        user,
-        now_local,
-        max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-    )
-    profile = user.ssau.profile
+    cache = await sync_cache(sync_service, account, now_local)
+    profile = account.ssau_profile
     if profile is None:
         await notifier.send(
             message.chat.id,
@@ -130,7 +116,7 @@ async def handle_schedule(
         return
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
-            start_date=profile.profile_details.academic_year_start,
+            start_date=profile.academic_year_start,
             target_date=now_local.date(),
         )
     ).week_number
@@ -139,7 +125,7 @@ async def handle_schedule(
             lessons=cache.lessons,
             target_date=now_local.date(),
             week_number=week_number,
-            subgroup=profile.profile_details.subgroup,
+            subgroup=profile.subgroup,
         )
     ).lessons
 
@@ -157,23 +143,21 @@ async def handle_schedule(
 @inject
 async def handle_tomorrow(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     sync_profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
+        Container.usecases.sync_user_profile_use_case
     ],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.services.week_calculator_service],
     daily_schedule_service: IDailyScheduleService = Provide[
-        Container.daily_schedule_service
+        Container.services.daily_schedule_service
     ],
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    user = await load_user(message, register_use_case)
-
-    if credentials_missing(user):
+    account = await load_account(message, register_use_case)
+    if credentials_missing(account):
         await notifier.send(
             message.chat.id,
             ErrorMessage(
@@ -184,15 +168,12 @@ async def handle_tomorrow(
         return
 
     try:
-        user = await ensure_profile(user, sync_profile_use_case)
+        account = await ensure_profile(account, sync_profile_use_case)
         now_local = user_now(clock.now(), timezone)
     except ValueError:
         await notifier.send(
             message.chat.id,
-            ErrorMessage(
-                title="Некорректная таймзона",
-                details=["Сообщи администратору."],
-            ),
+            ErrorMessage(title="Некорректная таймзона", details=["Сообщи администратору."]),
         )
         return
     except Exception:
@@ -208,13 +189,11 @@ async def handle_tomorrow(
 
     target_date = now_local.date() + timedelta(days=1)
     cache = await sync_cache(
-        uow_factory,
         sync_service,
-        user,
+        account,
         datetime.combine(target_date, time.min, tzinfo=now_local.tzinfo),
-        max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
     )
-    profile = user.ssau.profile
+    profile = account.ssau_profile
     if profile is None:
         await notifier.send(
             message.chat.id,
@@ -223,7 +202,7 @@ async def handle_tomorrow(
         return
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
-            start_date=profile.profile_details.academic_year_start,
+            start_date=profile.academic_year_start,
             target_date=target_date,
         )
     ).week_number
@@ -232,7 +211,7 @@ async def handle_tomorrow(
             lessons=cache.lessons,
             target_date=target_date,
             week_number=week_number,
-            subgroup=profile.profile_details.subgroup,
+            subgroup=profile.subgroup,
         )
     ).lessons
 
@@ -250,25 +229,23 @@ async def handle_tomorrow(
 @inject
 async def handle_next(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     sync_profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
+        Container.usecases.sync_user_profile_use_case
     ],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.services.week_calculator_service],
     upcoming_lesson_service: IUpcomingLessonService = Provide[
-        Container.upcoming_lesson_service
+        Container.services.upcoming_lesson_service
     ],
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
-    renderer: ITelegramMessageRenderer = Provide[Container.telegram_renderer],
-    sender: ITelegramMessageSender = Provide[Container.telegram_sender],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
+    renderer: ITelegramMessageRenderer = Provide[Container.telegram.renderer],
+    sender: ITelegramMessageSender = Provide[Container.telegram.sender],
 ) -> None:
-    user = await load_user(message, register_use_case)
-
-    if credentials_missing(user):
+    account = await load_account(message, register_use_case)
+    if credentials_missing(account):
         await notifier.send(
             message.chat.id,
             ErrorMessage(
@@ -279,15 +256,12 @@ async def handle_next(
         return
 
     try:
-        user = await ensure_profile(user, sync_profile_use_case)
+        account = await ensure_profile(account, sync_profile_use_case)
         now_local = user_now(clock.now(), timezone)
     except ValueError:
         await notifier.send(
             message.chat.id,
-            ErrorMessage(
-                title="Некорректная таймзона",
-                details=["Сообщи администратору."],
-            ),
+            ErrorMessage(title="Некорректная таймзона", details=["Сообщи администратору."]),
         )
         return
     except Exception:
@@ -301,14 +275,8 @@ async def handle_next(
         )
         return
 
-    cache = await sync_cache(
-        uow_factory,
-        sync_service,
-        user,
-        now_local,
-        max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-    )
-    profile = user.ssau.profile
+    cache = await sync_cache(sync_service, account, now_local)
+    profile = account.ssau_profile
     if profile is None:
         await notifier.send(
             message.chat.id,
@@ -317,7 +285,7 @@ async def handle_next(
         return
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
-            start_date=profile.profile_details.academic_year_start,
+            start_date=profile.academic_year_start,
             target_date=now_local.date(),
         )
     ).week_number
@@ -326,28 +294,18 @@ async def handle_next(
             lessons=cache.lessons,
             now_local=now_local,
             week_number=week_number,
-            subgroup=profile.profile_details.subgroup,
+            subgroup=profile.subgroup,
         )
     ).upcoming_lesson
 
     if next_lesson is None:
         days_until_monday = (DAYS_IN_WEEK + 1) - now_local.isoweekday()
         next_week_date = now_local.date() + timedelta(days=days_until_monday)
-        next_week_local = datetime.combine(
-            next_week_date,
-            time.min,
-            tzinfo=now_local.tzinfo,
-        )
-        cache = await sync_cache(
-            uow_factory,
-            sync_service,
-            user,
-            next_week_local,
-            max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-        )
+        next_week_local = datetime.combine(next_week_date, time.min, tzinfo=now_local.tzinfo)
+        cache = await sync_cache(sync_service, account, next_week_local)
         next_week_number = week_calculator.get_week_number(
             WeekCalculatorServiceInputDTO(
-                start_date=profile.profile_details.academic_year_start,
+                start_date=profile.academic_year_start,
                 target_date=next_week_date,
             )
         ).week_number
@@ -356,7 +314,7 @@ async def handle_next(
                 lessons=cache.lessons,
                 now_local=next_week_local,
                 week_number=next_week_number,
-                subgroup=profile.profile_details.subgroup,
+                subgroup=profile.subgroup,
             )
         ).upcoming_lesson
 
@@ -383,19 +341,17 @@ async def handle_next(
 @inject
 async def handle_sync(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     sync_profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
+        Container.usecases.sync_user_profile_use_case
     ],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    user = await load_user(message, register_use_case)
-
-    if credentials_missing(user):
+    account = await load_account(message, register_use_case)
+    if credentials_missing(account):
         await notifier.send(
             message.chat.id,
             ErrorMessage(
@@ -406,15 +362,12 @@ async def handle_sync(
         return
 
     try:
-        user = await ensure_profile(user, sync_profile_use_case)
+        account = await ensure_profile(account, sync_profile_use_case)
         now_local = user_now(clock.now(), timezone)
     except ValueError:
         await notifier.send(
             message.chat.id,
-            ErrorMessage(
-                title="Некорректная таймзона",
-                details=["Сообщи администратору."],
-            ),
+            ErrorMessage(title="Некорректная таймзона", details=["Сообщи администратору."]),
         )
         return
     except Exception:
@@ -428,21 +381,7 @@ async def handle_sync(
         )
         return
 
-    profile = user.ssau.profile
-    if profile is None:
-        await notifier.send(
-            message.chat.id,
-            ErrorMessage(title="Профиль не получен", details=["Не удалось получить профиль."]),
-        )
-        return
-    cache = await sync_cache(
-        uow_factory,
-        sync_service,
-        user,
-        now_local,
-        max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-        force=True,
-    )
+    cache = await sync_cache(sync_service, account, now_local, force=True)
     synced_at = user_now(cache.fetched_at, timezone)
 
     await notifier.send(

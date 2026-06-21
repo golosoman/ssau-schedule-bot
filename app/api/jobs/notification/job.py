@@ -1,10 +1,10 @@
-import logging
 from collections.abc import Callable
 
 from dependency_injector.wiring import Provide, inject
 
 from app.api.jobs.utils import send_alert
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.services.notifications.notification_service.dto.input import (
     NotificationServiceInputDTO,
 )
@@ -12,49 +12,43 @@ from app.app_layer.interfaces.services.notifications.notification_service.interf
     INotificationService,
 )
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.di import Container
-from app.infra.observability.metrics import observe_worker_error
-from app.logging.config import reset_request_id, set_request_id
+from app.di.container import Container
+from app.infra.observability.metrics.interface import IMetricsService
+from app.logging.config import get_logger
+from app.logging.context import reset_request_id, set_request_id
 from app.settings.config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @inject
 async def run(
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    notifier: INotifier = Provide[Container.notifier],
-    service: INotificationService = Provide[Container.notification_service],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.db.uow_factory],
+    account_repo: IAccountRepository = Provide[Container.repositories.account_repo],
+    notifier: INotifier = Provide[Container.telegram.notifier],
+    service: INotificationService = Provide[Container.services.notification_service],
+    metrics: IMetricsService = Provide[Container.metrics.metrics_service],
 ) -> None:
     alert_notifier = notifier if settings.alerts.enabled else None
     admin_chat_id = settings.alerts.admin_chat_id if settings.alerts.enabled else None
 
     try:
-        async with uow_factory() as uow:
-            users = await uow.users.list_enabled()
+        async with uow_factory():
+            accounts = await account_repo.list_notifiable()
 
-        for user in users:
-            token = set_request_id(f"worker-notify-{user.telegram.chat_id}")
+        for account in accounts:
+            token = set_request_id(f"worker-notify-{account.chat_id}")
             try:
-                if user.ssau.credentials is None:
-                    continue
-                if user.ssau.profile is None:
-                    continue
-                async with uow_factory() as uow:
-                    await service.process_user(
-                        NotificationServiceInputDTO(
-                            uow=uow,
-                            user=user,
-                        )
-                    )
+                async with uow_factory():
+                    await service.process_user(NotificationServiceInputDTO(account=account))
             except Exception:
                 logger.exception(
-                    "Notification processing failed for user %s.",
-                    user.telegram.chat_id,
+                    "Notification processing failed for account %s.",
+                    account.account_id,
                 )
             finally:
                 reset_request_id(token)
     except Exception:
         logger.exception("Notification job failed.")
-        observe_worker_error("notification")
+        metrics.observe_worker_error("notification")
         await send_alert(alert_notifier, admin_chat_id, "Ошибка воркера уведомлений")

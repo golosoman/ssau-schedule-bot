@@ -1,7 +1,7 @@
 import json
 from urllib.parse import unquote
 
-from app.infra.clients.ssau.nextjs_login_scraper import NextJsLoginScraper
+from app.infra.clients.ssau.auth.scraper import NextJsLoginScraper
 
 ACTION_ID = "60e1b506aa72f3dc090b62cc3f8ab44ef5c5569bc5"
 

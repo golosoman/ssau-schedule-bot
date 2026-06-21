@@ -26,7 +26,7 @@ pipeline {
     )
     string(
       name: 'DB_STAMP_REVISION',
-      defaultValue: '20260322_0001',
+      defaultValue: '20260601_0001',
       description: 'Ревизия для db-stamp-initial'
     )
   }

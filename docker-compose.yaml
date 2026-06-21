@@ -1,28 +1,82 @@
 services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    # Кэш расписания — данные регенерируемы, персистентность не нужна:
+    # отключаем RDB/AOF, ограничиваем память и включаем LRU-вытеснение.
+    command:
+      - valkey-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # Проброшен на хост — чтобы локальные `make run-bot`/`run-worker`
+    # (ENV=local, VALKEY__HOST=127.0.0.1) ходили в этот же Valkey.
+    ports:
+      - "6379:6379"
+
   bot:
     build: .
     restart: unless-stopped
     command: ["python", "-m", "app.entrypoints.bot_main"]
+    depends_on:
+      valkey:
+        condition: service_healthy
+    environment:
+      # ENV=prod -> грузит envs/prod.env, где VALKEY__HOST=valkey (имя сервиса).
+      - ENV=prod
     dns:
       - 1.1.1.1
       - 8.8.8.8
     volumes:
       - ./data:/app/data
       - ./envs:/app/envs:ro
-    # Uncomment to expose metrics on the host
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "3101:3101"
 
   worker:
     build: .
     restart: unless-stopped
     command: ["python", "-m", "app.entrypoints.worker_main"]
+    depends_on:
+      valkey:
+        condition: service_healthy
+    environment:
+      # ENV=prod -> грузит envs/prod.env, где VALKEY__HOST=valkey (имя сервиса).
+      - ENV=prod
     dns:
       - 1.1.1.1
       - 8.8.8.8
     volumes:
       - ./data:/app/data
       - ./envs:/app/envs:ro
-    # Uncomment to expose worker metrics on the host
-    # ports:
-    #   - "8001:8000"
+    ports:
+      - "3102:3102"
+
+  api:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "app.entrypoints.api_main"]
+    depends_on:
+      valkey:
+        condition: service_healthy
+    environment:
+      - ENV=prod
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    volumes:
+      - ./data:/app/data
+      - ./envs:/app/envs:ro
+    ports:
+      - "3100:3100"
+      - "3103:3103"

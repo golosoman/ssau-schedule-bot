@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict
 
 from app.domain.value_objects.lesson_time import LessonTime

@@ -8,4 +8,5 @@ class TelegramSettings(BaseModel):
 
     bot_token: SecretStr
     proxy_url: str | None = None
+    metrics_port: int = 3101
     retry: RetrySettings = Field(default_factory=RetrySettings)

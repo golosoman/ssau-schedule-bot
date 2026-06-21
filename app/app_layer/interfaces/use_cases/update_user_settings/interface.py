@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 
 from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (

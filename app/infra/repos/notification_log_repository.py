@@ -1,51 +1,47 @@
 from datetime import date, datetime
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.repos.notification_log.interface import (
     INotificationLogRepository,
 )
-from app.domain.entities.notification_log import NotificationLog
+from app.domain.value_objects.notification_type import NotificationType
 from app.infra.db.models import NotificationLogModel
+from app.infra.repos.base import BaseSqlAlchemyRepository
 
 
-class SqlAlchemyNotificationLogRepository(INotificationLogRepository):
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
-
+class SqlAlchemyNotificationLogRepository(BaseSqlAlchemyRepository, INotificationLogRepository):
     async def was_sent(
         self,
-        user_id: int,
+        account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: str,
+        notification_type: NotificationType,
     ) -> bool:
         result = await self._session.execute(
             select(NotificationLogModel.id).where(
-                NotificationLogModel.user_id == user_id,
+                NotificationLogModel.account_id == account_id,
                 NotificationLogModel.lesson_id == lesson_id,
                 NotificationLogModel.lesson_date == lesson_date,
-                NotificationLogModel.notification_type == notification_type,
+                NotificationLogModel.notification_type == notification_type.value,
             )
         )
         return result.scalar_one_or_none() is not None
 
     async def mark_sent(
         self,
-        user_id: int,
+        account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: str,
+        notification_type: NotificationType,
         sent_at: datetime,
     ) -> None:
-        log = NotificationLog(
-            user_id=user_id,
+        model = NotificationLogModel(
+            account_id=account_id,
             lesson_id=lesson_id,
             lesson_date=lesson_date,
-            notification_type=notification_type,
+            notification_type=notification_type.value,
             sent_at=sent_at,
         )
-        model = NotificationLogModel.from_domain_entity(log)
         self._session.add(model)
         await self._session.flush()

@@ -1,15 +1,14 @@
-from __future__ import annotations
-
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from app.domain.entities.base import BaseEntity
+from app.domain.value_objects.notification_type import NotificationType
 
 
-class NotificationLog(BaseModel):
-    model_config = ConfigDict(extra="ignore", validate_assignment=True)
+class NotificationLogEntity(BaseEntity):
+    """Журнал идемпотентности отправок (append-only, без ``updated_at``)."""
 
-    user_id: int
+    account_id: int
     lesson_id: int
     lesson_date: date
-    notification_type: str
+    notification_type: NotificationType
     sent_at: datetime

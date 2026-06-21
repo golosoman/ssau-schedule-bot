@@ -1,16 +1,13 @@
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
-from dependency_injector import providers
 
 import app.api.events.telegram.handlers as handlers_package
 import app.api.events.telegram.handlers.commands as commands_package
-from app.api.events.telegram.handlers import router as handlers_router
+from app.api.events.telegram.handlers.router import router as handlers_router
 from app.api.events.telegram.middlewares import RequestIdMiddleware
-from app.di import Container
-from app.infra.clients.telegram.bot import create_bot
-from app.infra.clients.telegram.settings import TelegramClientSettings
-from app.infra.observability.metrics import start_metrics_server
-from app.infra.observability.telemetry import configure_telemetry
+from app.di.container import di_scope, resolve_resource
+from app.infra.observability.metrics.server import start_metrics_server
+from app.infra.observability.telemetry.tracing import configure_telemetry
 from app.logging.config import configure_logging
 from app.settings.config import settings
 
@@ -33,31 +30,17 @@ async def _set_bot_commands(bot: Bot) -> None:
 
 
 async def run_bot() -> None:
-    container = Container()
     configure_logging(settings)
     configure_telemetry(settings)
     if settings.metrics.enabled:
-        start_metrics_server(settings.metrics.host, settings.metrics.port)
+        start_metrics_server(settings.metrics.host, settings.telegram.metrics_port)
 
-    engine = container.engine()
-
-    bot = create_bot(
-        TelegramClientSettings(
-            bot_token=settings.telegram.bot_token.get_secret_value(),
-            proxy_url=settings.telegram.proxy_url,
-        )
-    )
-
-    try:
-        container.telegram_bot.override(providers.Object(bot))
-        container.wire(packages=[handlers_package, commands_package])
-
+    wiring_params = {"packages": [handlers_package, commands_package]}
+    async with di_scope(wiring_params=wiring_params) as container:
+        bot = await resolve_resource(container.telegram.bot)
         dispatcher = Dispatcher()
         dispatcher.message.middleware(RequestIdMiddleware())
         dispatcher.include_router(handlers_router)
 
         await _set_bot_commands(bot)
         await dispatcher.start_polling(bot)
-    finally:
-        await bot.session.close()
-        await engine.dispose()

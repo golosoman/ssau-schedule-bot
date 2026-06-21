@@ -1,9 +1,9 @@
-import logging
-
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
-from app.domain.messages import ErrorMessage, TelegramMessage
+from app.domain.messages.base import TelegramMessage
+from app.domain.messages.error import ErrorMessage
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def send_alert(
@@ -13,8 +13,9 @@ async def send_alert(
 ) -> None:
     if notifier is None or admin_chat_id is None:
         return
-    payload = message
-    if not isinstance(message, TelegramMessage):
+    if isinstance(message, TelegramMessage):
+        payload: TelegramMessage = message
+    else:
         payload = ErrorMessage(title="Ошибка воркера", details=[message])
     try:
         await notifier.send(admin_chat_id, payload)

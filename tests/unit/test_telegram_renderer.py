@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import date, time
 
 from app.app_layer.interfaces.telegram.renderer.dto import RenderedTelegramMessage, TelegramEntity

@@ -1,33 +1,14 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import Self
 
-from app.app_layer.interfaces.repos.notification_log.interface import (
-    INotificationLogRepository,
-)
-from app.app_layer.interfaces.repos.schedule_cache.interface import (
-    IScheduleCacheRepository,
-)
-from app.app_layer.interfaces.repos.user.interface import IUserRepository
-
 
 class IUnitOfWork(ABC):
-    @property
-    @abstractmethod
-    def users(self) -> IUserRepository:
-        raise NotImplementedError
+    """Transactional boundary.
 
-    @property
-    @abstractmethod
-    def schedule_cache(self) -> IScheduleCacheRepository:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def notification_log(self) -> INotificationLogRepository:
-        raise NotImplementedError
+    Repositories are injected separately and use the active session from the
+    current UoW context. UoW must not expose repository properties.
+    """
 
     @abstractmethod
     async def __aenter__(self) -> Self:

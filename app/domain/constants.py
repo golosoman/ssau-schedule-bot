@@ -7,7 +7,7 @@ class SubgroupValue(IntEnum):
     TWO = 2
 
 
-DEFAULT_SUBGROUP_VALUE = SubgroupValue.ALL.value
+DEFAULT_SUBGROUP_VALUE = SubgroupValue.ALL
 DEFAULT_USER_TYPE = "student"
 DAYS_IN_WEEK = 7
 TELEGRAM_MESSAGE_MAX_LENGTH = 4096

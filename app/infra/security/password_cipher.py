@@ -1,11 +1,10 @@
-import logging
-
 from cryptography.fernet import Fernet, InvalidToken
 
 # Deprecated import path shim: keep exporting IPasswordCipher from this module for 1 release.
 from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FernetPasswordCipher(IPasswordCipher):

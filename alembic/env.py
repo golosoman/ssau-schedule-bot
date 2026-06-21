@@ -1,9 +1,5 @@
-from __future__ import annotations
-
 from asyncio import run
 from logging.config import fileConfig
-from os import getenv
-from pathlib import Path
 
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -11,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.infra.db import models  # noqa: F401
 from app.infra.db.base import Base
+from app.settings.config import settings
 
 config = context.config
 
@@ -19,42 +16,11 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/ssau_schedule_bot.db"
-ENV = getenv("ENV", "local")
-# Mirror app.settings.config: select the profile via ENV (sensitive + common + <ENV>.env),
-# later files overriding earlier ones.
-ENV_FILES = (
-    "envs/sensitive.env",
-    "envs/common.env",
-    f"envs/{ENV}.env",
-)
-
-
-def _read_database_url_from_env_files() -> str | None:
-    database_url: str | None = None
-    project_root = Path(__file__).resolve().parents[1]
-    for rel_path in ENV_FILES:
-        path = project_root / rel_path
-        if not path.exists():
-            continue
-        for raw_line in path.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", maxsplit=1)
-            if key.strip() != "DATABASE__URL":
-                continue
-            database_url = value.strip().strip("'").strip('"')
-    return database_url
-
 
 def _get_database_url() -> str:
-    return (
-        getenv("ALEMBIC_DATABASE_URL")
-        or getenv("DATABASE__URL")
-        or _read_database_url_from_env_files()
-        or DEFAULT_DATABASE_URL
-    )
+    # Полностью из глобальных настроек: settings сами собирают значения из
+    # env-файлов по текущему ENV (sensitive -> common -> $ENV).
+    return settings.database.url
 
 
 def _configure_database_url() -> None:

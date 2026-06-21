@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime, timedelta
 
 from app.app_layer.interfaces.schedule.upcoming_lesson.dto import UpcomingLesson

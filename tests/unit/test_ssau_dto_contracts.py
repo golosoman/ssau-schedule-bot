@@ -1,8 +1,8 @@
 from datetime import time
 
-from app.app_layer.interfaces.http.ssau.dto.profile import GroupDto, UnifiedYearDto
-from app.app_layer.interfaces.http.ssau.dto.schedule import ScheduleResponseDto
-from app.infra.clients.ssau.ssau_schedule_mapper import map_schedule
+from app.app_layer.interfaces.http.ssau.api.dto.profile import GroupDto, UnifiedYearDto
+from app.app_layer.interfaces.http.ssau.api.dto.schedule import ScheduleResponseDto
+from app.infra.clients.ssau.api.mapper import map_schedule
 
 
 def test_profile_dtos_parse() -> None:
@@ -32,6 +32,7 @@ def test_schedule_mapping() -> None:
         "lessons": [
             {
                 "id": 1,
+                "type": {"id": 1, "name": "Лекция"},
                 "discipline": {"name": "Math"},
                 "teachers": [{"name": "Ivanov"}],
                 "weekday": {"id": 1},

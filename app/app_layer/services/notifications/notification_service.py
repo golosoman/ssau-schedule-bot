@@ -1,5 +1,3 @@
-import logging
-
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.app_layer.interfaces.services.notifications.notification_planner.dto.input import (
     NotificationPlannerCollectDueInputDTO,
@@ -19,8 +17,10 @@ from app.app_layer.interfaces.services.notifications.notification_service.interf
 )
 from app.app_layer.interfaces.time.clock.interface import IClock
 from app.domain.messages.notification import NotificationMessage
+from app.domain.value_objects.notification_type import NotificationType
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class NotificationService(INotificationService):
@@ -38,13 +38,11 @@ class NotificationService(INotificationService):
         self,
         input_dto: NotificationServiceInputDTO,
     ) -> NotificationServiceOutputDTO:
-        uow = input_dto.uow
-        user = input_dto.user
+        account = input_dto.account
         now = self._clock.now()
         due = await self._planner.collect_due(
             NotificationPlannerCollectDueInputDTO(
-                uow=uow,
-                user=user,
+                account=account,
                 now=now,
             )
         )
@@ -54,7 +52,7 @@ class NotificationService(INotificationService):
         sent = 0
         for notification in due.notifications:
             await self._notifier.send(
-                notification.user.telegram.chat_id,
+                notification.account.telegram.chat_id,
                 NotificationMessage(
                     lesson=notification.lesson,
                     lesson_start=notification.lesson_start,
@@ -63,18 +61,21 @@ class NotificationService(INotificationService):
             )
             await self._planner.mark_sent(
                 NotificationPlannerMarkSentInputDTO(
-                    uow=uow,
                     notification=notification,
                     sent_at=now,
                 )
             )
             sent += 1
 
-        logger.info("Notifications sent: user=%s count=%s", user.telegram.chat_id, sent)
+        logger.info(
+            "Notifications sent: account=%s count=%s",
+            account.account_id,
+            sent,
+        )
         return NotificationServiceOutputDTO(sent_count=sent)
 
 
-def _notification_title(notification_type: str) -> str:
-    if notification_type == "at_start":
+def _notification_title(notification_type: NotificationType) -> str:
+    if notification_type == NotificationType.AT_START:
         return "Пара началась"
     return "Напоминание"

@@ -32,6 +32,11 @@ class Subgroup(BaseModel):
     def all(cls) -> "Subgroup":
         return cls(value=SubgroupValue.ALL)
 
+    @classmethod
+    def parse(cls, value: object) -> "Subgroup":
+        """Build from a raw value (str/int/SubgroupValue); validator coerces it."""
+        return cls(value=value)  # type: ignore[arg-type]
+
     def __int__(self) -> int:
         return int(self.value)
 

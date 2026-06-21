@@ -1,15 +1,15 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.domain.entities.schedule_cache import ScheduleCache
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
 
 
 class ScheduleSyncForUserOutputDTO(BaseModel):
-    model_config = ConfigDict(extra="ignore", validate_assignment=True)
+    model_config = ConfigDict(frozen=True)
 
-    cache: ScheduleCache
+    cache: CachedWeek
 
 
 class ScheduleSyncIfStaleOutputDTO(BaseModel):
-    model_config = ConfigDict(extra="ignore", validate_assignment=True)
+    model_config = ConfigDict(frozen=True)
 
-    cache: ScheduleCache
+    cache: CachedWeek

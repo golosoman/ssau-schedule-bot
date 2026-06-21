@@ -1,10 +1,11 @@
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 
+from app.app_layer.interfaces.cache.schedule.interface import IScheduleCacheStore
 from app.app_layer.interfaces.notifications.lesson_notification.dto import (
     LessonNotification,
-    NotificationType,
+)
+from app.app_layer.interfaces.repos.notification_log.interface import (
+    INotificationLogRepository,
 )
 from app.app_layer.interfaces.services.notifications.notification_planner.dto.input import (
     NotificationPlannerCollectDueInputDTO,
@@ -22,11 +23,12 @@ from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
     IWeekCalculatorService,
 )
+from app.domain.value_objects.notification_type import NotificationType
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.timezone import Timezone
 
-BEFORE_START_NOTIFICATION_TYPE: NotificationType = "before_start"
-AT_START_NOTIFICATION_TYPE: NotificationType = "at_start"
+BEFORE_START_NOTIFICATION_TYPE = NotificationType.BEFORE_START
+AT_START_NOTIFICATION_TYPE = NotificationType.AT_START
 
 
 class NotificationPlanner(INotificationPlannerService):
@@ -35,32 +37,33 @@ class NotificationPlanner(INotificationPlannerService):
         lead_minutes: int,
         timezone: Timezone,
         week_calculator: IWeekCalculatorService,
+        cache_store: IScheduleCacheStore,
+        notification_log_repo: INotificationLogRepository,
     ) -> None:
         self._lead_minutes = lead_minutes
         self._timezone = timezone
         self._week_calculator = week_calculator
+        self._cache_store = cache_store
+        self._notification_log_repo = notification_log_repo
 
     async def collect_due(
         self,
         input_dto: NotificationPlannerCollectDueInputDTO,
     ) -> NotificationPlannerCollectDueOutputDTO:
-        uow = input_dto.uow
-        user = input_dto.user
+        account = input_dto.account
         now = input_dto.now
 
-        if user.id is None:
-            return NotificationPlannerCollectDueOutputDTO(notifications=[])
-        if user.ssau.profile is None:
+        if account.ssau_profile is None:
             return NotificationPlannerCollectDueOutputDTO(notifications=[])
 
         now_local = self._to_local_time(now)
         week_number = self._week_calculator.get_week_number(
             WeekCalculatorServiceInputDTO(
-                start_date=user.ssau.profile.profile_details.academic_year_start,
+                start_date=account.ssau_profile.academic_year_start,
                 target_date=now_local.date(),
             )
         ).week_number
-        cache = await uow.schedule_cache.get(user.id, week_number)
+        cache = await self._cache_store.get(account.account_id, week_number)
         if cache is None:
             return NotificationPlannerCollectDueOutputDTO(notifications=[])
 
@@ -73,20 +76,12 @@ class NotificationPlanner(INotificationPlannerService):
                 continue
             if not _lesson_matches_subgroup(
                 lesson.subgroup,
-                user.ssau.profile.profile_details.subgroup,
+                account.ssau_profile.subgroup,
             ):
                 continue
 
-            lesson_start = datetime.combine(
-                today,
-                lesson.time.start,
-                tzinfo=now_local.tzinfo,
-            )
-            lesson_end = datetime.combine(
-                today,
-                lesson.time.end,
-                tzinfo=now_local.tzinfo,
-            )
+            lesson_start = datetime.combine(today, lesson.time.start, tzinfo=now_local.tzinfo)
+            lesson_end = datetime.combine(today, lesson.time.end, tzinfo=now_local.tzinfo)
             notification_type = _resolve_notification_type(
                 now=now_local,
                 lesson_start=lesson_start,
@@ -96,8 +91,8 @@ class NotificationPlanner(INotificationPlannerService):
             if notification_type is None:
                 continue
 
-            already_sent = await uow.notification_log.was_sent(
-                user.id,
+            already_sent = await self._notification_log_repo.was_sent(
+                account.account_id,
                 lesson.id,
                 today,
                 notification_type,
@@ -107,7 +102,7 @@ class NotificationPlanner(INotificationPlannerService):
 
             due.append(
                 LessonNotification(
-                    user=user,
+                    account=account,
                     lesson=lesson,
                     lesson_start=lesson_start,
                     notification_type=notification_type,
@@ -120,13 +115,10 @@ class NotificationPlanner(INotificationPlannerService):
         self,
         input_dto: NotificationPlannerMarkSentInputDTO,
     ) -> None:
-        uow = input_dto.uow
         notification = input_dto.notification
-        if notification.user.id is None:
-            return
         sent_at = input_dto.sent_at or datetime.now(UTC)
-        await uow.notification_log.mark_sent(
-            user_id=notification.user.id,
+        await self._notification_log_repo.mark_sent(
+            account_id=notification.account.account_id,
             lesson_id=notification.lesson.id,
             lesson_date=notification.lesson_start.date(),
             notification_type=notification.notification_type,

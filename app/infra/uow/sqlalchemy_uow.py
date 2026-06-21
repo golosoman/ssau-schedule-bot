@@ -1,64 +1,49 @@
-from __future__ import annotations
-
+from contextvars import ContextVar, Token
 from types import TracebackType
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.app_layer.interfaces.repos.notification_log.interface import (
-    INotificationLogRepository,
-)
-from app.app_layer.interfaces.repos.schedule_cache.interface import (
-    IScheduleCacheRepository,
-)
-from app.app_layer.interfaces.repos.user.interface import IUserRepository
-from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.infra.repos import (
-    SqlAlchemyNotificationLogRepository,
-    SqlAlchemyScheduleCacheRepository,
-    SqlAlchemyUserRepository,
+
+_session_ctx: ContextVar[AsyncSession | None] = ContextVar(
+    "sqlalchemy_uow_session",
+    default=None,
 )
+
+
+class SessionNotFoundError(RuntimeError):
+    pass
+
+
+class NestedUnitOfWorkError(RuntimeError):
+    pass
+
+
+def get_current_session() -> AsyncSession:
+    session = _session_ctx.get()
+    if session is None:
+        raise SessionNotFoundError("Repository call requires an active Unit of Work.")
+    return session
 
 
 class SqlAlchemyUnitOfWork(IUnitOfWork):
     def __init__(
         self,
         session_factory: async_sessionmaker[AsyncSession],
-        password_cipher: IPasswordCipher,
     ) -> None:
         self._session_factory = session_factory
-        self._password_cipher = password_cipher
         self._session: AsyncSession | None = None
+        self._session_token: Token[AsyncSession | None] | None = None
         self._committed = False
-        self._users: IUserRepository | None = None
-        self._schedule_cache: IScheduleCacheRepository | None = None
-        self._notification_log: INotificationLogRepository | None = None
 
-    async def __aenter__(self) -> SqlAlchemyUnitOfWork:
+    async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
+        if _session_ctx.get() is not None:
+            raise NestedUnitOfWorkError("Nested Unit of Work is not allowed.")
         self._session = self._session_factory()
-        self._users = SqlAlchemyUserRepository(self._session, self._password_cipher)
-        self._schedule_cache = SqlAlchemyScheduleCacheRepository(self._session)
-        self._notification_log = SqlAlchemyNotificationLogRepository(self._session)
+        self._session_token = _session_ctx.set(self._session)
         self._committed = False
         return self
-
-    @property
-    def users(self) -> IUserRepository:
-        if self._users is None:
-            raise RuntimeError("IUnitOfWork is not initialized.")
-        return self._users
-
-    @property
-    def schedule_cache(self) -> IScheduleCacheRepository:
-        if self._schedule_cache is None:
-            raise RuntimeError("IUnitOfWork is not initialized.")
-        return self._schedule_cache
-
-    @property
-    def notification_log(self) -> INotificationLogRepository:
-        if self._notification_log is None:
-            raise RuntimeError("IUnitOfWork is not initialized.")
-        return self._notification_log
 
     async def __aexit__(
         self,
@@ -70,23 +55,40 @@ class SqlAlchemyUnitOfWork(IUnitOfWork):
             return
         try:
             if exc:
-                await self._session.rollback()
+                await self.rollback()
             elif not self._committed:
-                await self._session.commit()
+                await self.commit()
         finally:
             await self._session.close()
             self._session = None
-            self._users = None
-            self._schedule_cache = None
-            self._notification_log = None
+            if self._session_token is not None:
+                _session_ctx.reset(self._session_token)
+                self._session_token = None
 
     async def commit(self) -> None:
         if self._session is None:
             return
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except SQLAlchemyError:
+            await self._session.rollback()
+            raise
         self._committed = True
 
     async def rollback(self) -> None:
         if self._session is None:
             return
         await self._session.rollback()
+        self._committed = True
+
+
+class SqlAlchemyUnitOfWorkFactory:
+    """Создаёт UoW синхронно. Резолвится в DI один раз (с уже инициализированным
+    engine), а вызов фабрики не трогает DI — поэтому `async with uow_factory()`
+    работает в use case'ах и job'ах."""
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    def __call__(self) -> IUnitOfWork:
+        return SqlAlchemyUnitOfWork(self._session_factory)

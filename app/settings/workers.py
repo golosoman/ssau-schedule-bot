@@ -6,3 +6,4 @@ class WorkerSettings(BaseModel):
 
     schedule_fetch_interval_hours: int = 12
     notification_poll_interval_seconds: int = 60
+    metrics_port: int = 3102

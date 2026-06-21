@@ -2,8 +2,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
-from tenacity import AsyncRetrying, retry_if_exception, stop_after_attempt
-from tenacity.wait import wait_combine, wait_exponential, wait_random
+from tenacity import AsyncRetrying, RetryCallState, retry_if_exception, stop_after_attempt
+from tenacity.wait import wait_base, wait_combine, wait_exponential, wait_random
 
 T = TypeVar("T")
 
@@ -29,9 +29,12 @@ async def retry_async(
     is_retryable: Callable[[Exception], bool],
     on_retry: Callable[[Exception, float, int], None] | None = None,
 ) -> T:
+    def _predicate(exc: BaseException) -> bool:
+        return isinstance(exc, Exception) and is_retryable(exc)
+
     wait_strategy = _RetryAfterWait(_build_wait(policy))
     retrying = AsyncRetrying(
-        retry=retry_if_exception(is_retryable),
+        retry=retry_if_exception(_predicate),
         wait=wait_strategy,
         stop=stop_after_attempt(policy.max_attempts),
         reraise=True,
@@ -43,8 +46,8 @@ async def retry_async(
     raise RuntimeError("Retrying failed without result.")
 
 
-def _build_wait(policy: RetryPolicy):
-    wait_strategy = wait_exponential(
+def _build_wait(policy: RetryPolicy) -> wait_base:
+    wait_strategy: wait_base = wait_exponential(
         multiplier=policy.base_delay,
         max=policy.max_delay,
     )
@@ -53,22 +56,26 @@ def _build_wait(policy: RetryPolicy):
     return wait_strategy
 
 
-def _build_before_sleep(on_retry: Callable[[Exception, float, int], None]):
-    def _before_sleep(retry_state) -> None:
+def _build_before_sleep(
+    on_retry: Callable[[Exception, float, int], None],
+) -> Callable[[RetryCallState], None]:
+    def _before_sleep(retry_state: RetryCallState) -> None:
         if retry_state.outcome is None:
             return
         exc = retry_state.outcome.exception()
+        if not isinstance(exc, Exception):
+            return
         delay = retry_state.next_action.sleep if retry_state.next_action else 0.0
         on_retry(exc, delay, retry_state.attempt_number)
 
     return _before_sleep
 
 
-class _RetryAfterWait:
-    def __init__(self, fallback) -> None:
+class _RetryAfterWait(wait_base):
+    def __init__(self, fallback: wait_base) -> None:
         self._fallback = fallback
 
-    def __call__(self, retry_state) -> float:
+    def __call__(self, retry_state: RetryCallState) -> float:
         if retry_state.outcome is None:
             return self._fallback(retry_state)
         exc = retry_state.outcome.exception()

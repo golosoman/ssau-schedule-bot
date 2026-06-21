@@ -1,20 +1,7 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 
 from aiogram.types import MessageEntity
-from aiogram.utils.formatting import Bold, Code, Italic, Text
-
-try:
-    from aiogram.utils.formatting import TextLink as _TextLink
-
-    def _make_link(text: str, url: str) -> object:
-        return _TextLink(text, url=url)
-except ImportError:  # pragma: no cover - compatibility shim
-    from aiogram.utils.formatting import Link as _TextLink
-
-    def _make_link(text: str, url: str) -> object:
-        return _TextLink(text, url)
+from aiogram.utils.formatting import Bold, Code, Italic, Text, TextLink
 
 from app.app_layer.interfaces.telegram.renderer.dto import (
     RenderedTelegramMessage,
@@ -22,8 +9,16 @@ from app.app_layer.interfaces.telegram.renderer.dto import (
 )
 from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
 from app.domain.entities.lesson import Lesson
-from app.domain.messages import ErrorMessage, InfoMessage, NotificationMessage, ScheduleMessage
 from app.domain.messages.base import TelegramMessage
+from app.domain.messages.error import ErrorMessage
+from app.domain.messages.info import InfoMessage
+from app.domain.messages.notification import NotificationMessage
+from app.domain.messages.plain import PlainMessage
+from app.domain.messages.schedule import ScheduleMessage
+
+
+def _make_link(text: str, url: str) -> Text:
+    return TextLink(text, url=url)
 
 
 class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
@@ -36,7 +31,13 @@ class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
             return self._render_info(message)
         if isinstance(message, ErrorMessage):
             return self._render_error(message)
+        if isinstance(message, PlainMessage):
+            return self._render_plain(message)
         raise TypeError(f"Unsupported message type: {type(message)!r}")
+
+    @staticmethod
+    def _render_plain(message: PlainMessage) -> RenderedTelegramMessage:
+        return AiogramTelegramMessageRenderer._as_rendered(Text(message.text))
 
     def _render_schedule(self, message: ScheduleMessage) -> RenderedTelegramMessage:
         parts: list[object] = [

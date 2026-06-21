@@ -1,5 +1,3 @@
-import logging
-from collections.abc import Callable
 from datetime import datetime, time, timedelta
 
 from aiogram import Router
@@ -11,7 +9,7 @@ from app.api.events.telegram.handlers.shared import (
     command_args,
     credentials_missing,
     ensure_profile,
-    load_user,
+    load_account,
     sync_cache,
     user_now,
 )
@@ -32,7 +30,6 @@ from app.app_layer.interfaces.services.schedule.week_calculator.interface import
     IWeekCalculatorService,
 )
 from app.app_layer.interfaces.time.clock.interface import IClock
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.register_user.interface import (
     IRegisterUserUseCase,
 )
@@ -45,15 +42,15 @@ from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (
 from app.app_layer.interfaces.use_cases.update_user_settings.interface import (
     IUpdateUserSettingsUseCase,
 )
-from app.di import Container
+from app.di.container import Container
 from app.domain.constants import DAYS_IN_WEEK
 from app.domain.messages.error import ErrorMessage
 from app.domain.messages.info import InfoMessage
 from app.domain.messages.notification import NotificationMessage
 from app.domain.value_objects.timezone import Timezone
-from app.settings.config import settings
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = Router(name="notifications")
 
@@ -62,11 +59,11 @@ router = Router(name="notifications")
 @inject
 async def handle_notify(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     update_settings_use_case: IUpdateUserSettingsUseCase = Provide[
-        Container.update_user_settings_use_case
+        Container.usecases.update_user_settings_use_case
     ],
-    notifier: INotifier = Provide[Container.notifier],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
     args = command_args(message)
     if not args or args[0] not in {"on", "off"}:
@@ -77,7 +74,7 @@ async def handle_notify(
         return
 
     enabled = args[0] == "on"
-    await load_user(message, register_use_case)
+    await load_account(message, register_use_case)
     await update_settings_use_case.execute(
         UpdateUserSettingsUseCaseInputDTO(
             chat_id=message.chat.id,
@@ -98,23 +95,21 @@ async def handle_notify(
 @inject
 async def handle_notify_test(
     message: Message,
-    register_use_case: IRegisterUserUseCase = Provide[Container.register_user_use_case],
+    register_use_case: IRegisterUserUseCase = Provide[Container.usecases.register_user_use_case],
     sync_profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
+        Container.usecases.sync_user_profile_use_case
     ],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.services.week_calculator_service],
     upcoming_lesson_service: IUpcomingLessonService = Provide[
-        Container.upcoming_lesson_service
+        Container.services.upcoming_lesson_service
     ],
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
 ) -> None:
-    user = await load_user(message, register_use_case)
-
-    if credentials_missing(user):
+    account = await load_account(message, register_use_case)
+    if credentials_missing(account):
         await notifier.send(
             message.chat.id,
             ErrorMessage(
@@ -125,15 +120,12 @@ async def handle_notify_test(
         return
 
     try:
-        user = await ensure_profile(user, sync_profile_use_case)
+        account = await ensure_profile(account, sync_profile_use_case)
         now_local = user_now(clock.now(), timezone)
     except ValueError:
         await notifier.send(
             message.chat.id,
-            ErrorMessage(
-                title="Некорректная таймзона",
-                details=["Сообщи администратору."],
-            ),
+            ErrorMessage(title="Некорректная таймзона", details=["Сообщи администратору."]),
         )
         return
     except Exception:
@@ -147,14 +139,8 @@ async def handle_notify_test(
         )
         return
 
-    cache = await sync_cache(
-        uow_factory,
-        sync_service,
-        user,
-        now_local,
-        max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-    )
-    profile = user.ssau.profile
+    cache = await sync_cache(sync_service, account, now_local)
+    profile = account.ssau_profile
     if profile is None:
         await notifier.send(
             message.chat.id,
@@ -163,7 +149,7 @@ async def handle_notify_test(
         return
     week_number = week_calculator.get_week_number(
         WeekCalculatorServiceInputDTO(
-            start_date=profile.profile_details.academic_year_start,
+            start_date=profile.academic_year_start,
             target_date=now_local.date(),
         )
     ).week_number
@@ -172,28 +158,18 @@ async def handle_notify_test(
             lessons=cache.lessons,
             now_local=now_local,
             week_number=week_number,
-            subgroup=profile.profile_details.subgroup,
+            subgroup=profile.subgroup,
         )
     ).upcoming_lesson
 
     if next_lesson is None:
         days_until_monday = (DAYS_IN_WEEK + 1) - now_local.isoweekday()
         next_week_date = now_local.date() + timedelta(days=days_until_monday)
-        next_week_local = datetime.combine(
-            next_week_date,
-            time.min,
-            tzinfo=now_local.tzinfo,
-        )
-        cache = await sync_cache(
-            uow_factory,
-            sync_service,
-            user,
-            next_week_local,
-            max_age=timedelta(hours=settings.workers.schedule_fetch_interval_hours),
-        )
+        next_week_local = datetime.combine(next_week_date, time.min, tzinfo=now_local.tzinfo)
+        cache = await sync_cache(sync_service, account, next_week_local)
         next_week_number = week_calculator.get_week_number(
             WeekCalculatorServiceInputDTO(
-                start_date=profile.profile_details.academic_year_start,
+                start_date=profile.academic_year_start,
                 target_date=next_week_date,
             )
         ).week_number
@@ -202,17 +178,14 @@ async def handle_notify_test(
                 lessons=cache.lessons,
                 now_local=next_week_local,
                 week_number=next_week_number,
-                subgroup=profile.profile_details.subgroup,
+                subgroup=profile.subgroup,
             )
         ).upcoming_lesson
 
     if next_lesson is None:
         await notifier.send(
             message.chat.id,
-            InfoMessage(
-                title="Тест уведомления",
-                lines=["Ближайших занятий не найдено."],
-            ),
+            InfoMessage(title="Тест уведомления", lines=["Ближайших занятий не найдено."]),
         )
         return
 

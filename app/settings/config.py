@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 from functools import lru_cache
 
@@ -15,6 +13,7 @@ from app.settings.security import SecuritySettings
 from app.settings.ssau import SSAUSettings
 from app.settings.telegram import TelegramSettings
 from app.settings.telemetry import TelemetrySettings
+from app.settings.valkey import ValkeySettings
 from app.settings.workers import WorkerSettings
 
 ENVS_DIR = "./envs"
@@ -44,6 +43,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = DatabaseSettings()
     notifications: NotificationSettings = NotificationSettings()
     workers: WorkerSettings = WorkerSettings()
+    valkey: ValkeySettings = ValkeySettings()
     logging: LoggingSettings = LoggingSettings()
     metrics: MetricsSettings = MetricsSettings()
     telemetry: TelemetrySettings = TelemetrySettings()

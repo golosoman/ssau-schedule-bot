@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
@@ -6,6 +5,7 @@ from dependency_injector.wiring import Provide, inject
 
 from app.api.jobs.utils import send_alert
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
+from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
     ScheduleSyncIfStaleInputDTO,
 )
@@ -20,19 +20,14 @@ from app.app_layer.interfaces.services.schedule.week_calculator.interface import
 )
 from app.app_layer.interfaces.time.clock.interface import IClock
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
-    SyncUserProfileUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
-    ISyncUserProfileUseCase,
-)
-from app.di import Container
+from app.di.container import Container
 from app.domain.value_objects.timezone import Timezone
-from app.infra.observability.metrics import observe_schedule_sync, observe_worker_error
-from app.logging.config import reset_request_id, set_request_id
+from app.infra.observability.metrics.interface import IMetricsService
+from app.logging.config import get_logger
+from app.logging.context import reset_request_id, set_request_id
 from app.settings.config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _user_now(now_utc: datetime, timezone: Timezone) -> datetime:
@@ -42,84 +37,60 @@ def _user_now(now_utc: datetime, timezone: Timezone) -> datetime:
 
 @inject
 async def run(
-    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.uow.provider],
-    sync_service: IScheduleSyncService = Provide[Container.schedule_sync_service],
-    profile_use_case: ISyncUserProfileUseCase = Provide[
-        Container.sync_user_profile_use_case
-    ],
-    week_calculator: IWeekCalculatorService = Provide[Container.week_calculator_service],
-    clock: IClock = Provide[Container.clock],
-    timezone: Timezone = Provide[Container.default_timezone],
-    notifier: INotifier = Provide[Container.notifier],
+    uow_factory: Callable[[], IUnitOfWork] = Provide[Container.db.uow_factory],
+    account_repo: IAccountRepository = Provide[Container.repositories.account_repo],
+    sync_service: IScheduleSyncService = Provide[Container.services.schedule_sync_service],
+    week_calculator: IWeekCalculatorService = Provide[Container.services.week_calculator_service],
+    clock: IClock = Provide[Container.core.clock],
+    timezone: Timezone = Provide[Container.core.default_timezone],
+    notifier: INotifier = Provide[Container.telegram.notifier],
+    metrics: IMetricsService = Provide[Container.metrics.metrics_service],
 ) -> None:
     alert_notifier = notifier if settings.alerts.enabled else None
     admin_chat_id = settings.alerts.admin_chat_id if settings.alerts.enabled else None
 
     try:
-        async with uow_factory() as uow:
-            users = await uow.users.list_enabled()
+        async with uow_factory():
+            accounts = await account_repo.list_notifiable()
 
         now_utc = clock.now()
-        max_age = timedelta(hours=settings.workers.schedule_fetch_interval_hours)
-        for user in users:
-            token = set_request_id(f"worker-sync-{user.telegram.chat_id}")
+        for account in accounts:
+            profile = account.ssau_profile
+            if profile is None:
+                continue
+            token = set_request_id(f"worker-sync-{account.chat_id}")
             try:
-                if user.ssau.credentials is None:
-                    continue
-                if user.ssau.profile is None:
-                    user = (
-                        await profile_use_case.execute(
-                            SyncUserProfileUseCaseInputDTO(user=user)
-                        )
-                    ).user
-                if user.ssau.profile is None:
-                    continue
-
                 now_local = _user_now(now_utc, timezone)
-                async with uow_factory() as uow:
-                    await sync_service.sync_if_stale(
-                        ScheduleSyncIfStaleInputDTO(
-                            uow=uow,
-                            user=user,
-                            target_date=now_local.date(),
-                            max_age=max_age,
-                        )
+                await sync_service.sync_if_stale(
+                    ScheduleSyncIfStaleInputDTO(account=account, target_date=now_local.date())
+                )
+                tomorrow = now_local.date() + timedelta(days=1)
+                tomorrow_week = week_calculator.get_week_number(
+                    WeekCalculatorServiceInputDTO(
+                        start_date=profile.academic_year_start,
+                        target_date=tomorrow,
                     )
-                    tomorrow = now_local.date() + timedelta(days=1)
-                    tomorrow_week = week_calculator.get_week_number(
-                        WeekCalculatorServiceInputDTO(
-                            start_date=user.ssau.profile.profile_details.academic_year_start,
-                            target_date=tomorrow,
-                        )
-                    ).week_number
-                    current_week = week_calculator.get_week_number(
-                        WeekCalculatorServiceInputDTO(
-                            start_date=user.ssau.profile.profile_details.academic_year_start,
-                            target_date=now_local.date(),
-                        )
-                    ).week_number
-                    if tomorrow_week != current_week:
-                        await sync_service.sync_if_stale(
-                            ScheduleSyncIfStaleInputDTO(
-                                uow=uow,
-                                user=user,
-                                target_date=tomorrow,
-                                max_age=max_age,
-                            )
-                        )
-                observe_schedule_sync("success")
+                ).week_number
+                current_week = week_calculator.get_week_number(
+                    WeekCalculatorServiceInputDTO(
+                        start_date=profile.academic_year_start,
+                        target_date=now_local.date(),
+                    )
+                ).week_number
+                if tomorrow_week != current_week:
+                    await sync_service.sync_if_stale(
+                        ScheduleSyncIfStaleInputDTO(account=account, target_date=tomorrow)
+                    )
+                metrics.observe_schedule_sync("success")
             except ValueError:
                 logger.warning("Invalid timezone in settings.")
-                observe_schedule_sync("error")
+                metrics.observe_schedule_sync("error")
             except Exception:
-                logger.exception(
-                    "Schedule sync failed for user %s.",
-                    user.telegram.chat_id,
-                )
-                observe_schedule_sync("error")
+                logger.exception("Schedule sync failed for account %s.", account.account_id)
+                metrics.observe_schedule_sync("error")
             finally:
                 reset_request_id(token)
     except Exception:
         logger.exception("Schedule sync job failed.")
-        observe_worker_error("schedule_sync")
+        metrics.observe_worker_error("schedule_sync")
         await send_alert(alert_notifier, admin_chat_id, "Ошибка воркера синка")

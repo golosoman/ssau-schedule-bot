@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-import logging
-
 from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
     WeekCalculatorServiceInputDTO,
 )
@@ -11,8 +7,9 @@ from app.app_layer.interfaces.services.schedule.week_calculator.dto.output impor
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
     IWeekCalculatorService,
 )
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AcademicWeekCalculator(IWeekCalculatorService):

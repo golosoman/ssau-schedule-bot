@@ -1,35 +1,37 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+import app.api.rest.routers as routers_package
 from app.api.rest.exception_handler import register_exception_handlers
 from app.api.rest.init_routes import init_routes
-from app.di import Container
-from app.infra.observability.metrics import start_metrics_server
-from app.infra.observability.telemetry import configure_telemetry
+from app.di.container import di_scope
+from app.infra.observability.metrics.server import start_metrics_server
+from app.infra.observability.telemetry.tracing import configure_telemetry
 from app.logging.config import configure_logging
 from app.settings.config import settings
 
 
 def create_app() -> FastAPI:
-    container = Container()
     configure_logging(settings)
     configure_telemetry(settings)
     if settings.metrics.enabled:
-        start_metrics_server(settings.metrics.host, settings.metrics.port)
+        start_metrics_server(settings.metrics.host, settings.api.metrics_port)
 
-    app = FastAPI()
-    app.state.container = container
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        async with di_scope(wiring_params={"packages": [routers_package]}) as container:
+            app.state.container = container
+            yield
 
-    @app.on_event("startup")
-    async def on_startup() -> None:
-        engine = container.engine()
-        app.state.engine = engine
-
-    @app.on_event("shutdown")
-    async def on_shutdown() -> None:
-        engine = getattr(app.state, "engine", None)
-        if engine is not None:
-            await engine.dispose()
-
+    app = FastAPI(
+        title=settings.api.title,
+        docs_url=settings.api.docs_url,
+        redoc_url=settings.api.redoc_url,
+        openapi_url=settings.api.openapi_url,
+        lifespan=lifespan,
+    )
     register_exception_handlers(app)
     init_routes(app)
     return app

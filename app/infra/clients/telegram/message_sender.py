@@ -1,9 +1,5 @@
-from __future__ import annotations
-
-import logging
 from collections.abc import Iterable
 
-from aiogram import Bot
 from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 from aiogram.types import InlineKeyboardMarkup, MessageEntity
 
@@ -15,14 +11,16 @@ from app.app_layer.interfaces.telegram.sender.interface import (
     ITelegramMessageSender,
 )
 from app.domain.constants import TELEGRAM_MESSAGE_MAX_LENGTH
+from app.infra.clients.telegram.interface import ITelegramBot
 from app.infra.clients.telegram.message_splitter import split_message
 from app.infra.retry import RetryPolicy, retry_async
+from app.logging.config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TelegramMessageSender(ITelegramMessageSender):
-    def __init__(self, bot: Bot, retry_policy: RetryPolicy) -> None:
+    def __init__(self, bot: ITelegramBot, retry_policy: RetryPolicy) -> None:
         self._bot = bot
         self._retry_policy = retry_policy
 

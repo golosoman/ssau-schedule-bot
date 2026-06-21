@@ -1,10 +1,9 @@
-from __future__ import annotations
-
-from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from aiogram.types import Message
 
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
+from app.app_layer.interfaces.repos.account.dto import AccountView
 from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
     ScheduleSyncForUserInputDTO,
     ScheduleSyncIfStaleInputDTO,
@@ -12,7 +11,6 @@ from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
 )
-from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
 from app.app_layer.interfaces.use_cases.register_user.dto.input import (
     RegisterUserUseCaseInputDTO,
 )
@@ -25,7 +23,6 @@ from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
     ISyncUserProfileUseCase,
 )
-from app.domain.entities.users import User
 from app.domain.messages.info import InfoMessage
 from app.domain.value_objects.timezone import Timezone
 
@@ -41,20 +38,21 @@ def user_now(now_utc: datetime, timezone: Timezone) -> datetime:
     return now_utc.astimezone(zone)
 
 
-def build_status_message(user: User) -> InfoMessage:
-    profile = user.ssau.profile
-    group_label = str(profile.profile_ids.group_id) if profile is not None else "не определена"
-    year_label = str(profile.profile_ids.year_id) if profile is not None else "не определен"
-    subgroup_label = (
-        str(profile.profile_details.subgroup) if profile is not None else "не определена"
+def build_status_message(account: AccountView) -> InfoMessage:
+    profile = account.ssau_profile
+    group_label = str(profile.group_id.value) if profile is not None else "не определена"
+    year_label = str(profile.year_id.value) if profile is not None else "не определен"
+    subgroup_label = str(profile.subgroup) if profile is not None else "не определена"
+    user_type_label = profile.user_type if profile is not None else "не определен"
+    creds = "есть" if account.is_authed else "нет"
+    notify_status = (
+        "включены" if account.settings.schedule_notifications_enabled else "выключены"
     )
-    creds = "есть" if user.ssau.credentials is not None else "нет"
-    notify_status = "включены" if user.telegram.notify_enabled else "выключены"
     lines = [
         f"Группа: {group_label}",
         f"Год: {year_label}",
         f"Подгруппа: {subgroup_label}",
-        f"Тип: {profile.profile_details.user_type if profile is not None else 'не определен'}",
+        f"Тип: {user_type_label}",
         f"Уведомления: {notify_status}",
         f"Доступ: {creds}",
     ]
@@ -73,11 +71,11 @@ def extract_telegram_identity(message: Message) -> str:
     return display_name
 
 
-def credentials_missing(user: User) -> bool:
-    return user.ssau.credentials is None
+def credentials_missing(account: AccountView) -> bool:
+    return not account.is_authed
 
 
-async def load_user(message: Message, use_case: IRegisterUserUseCase) -> User:
+async def load_account(message: Message, use_case: IRegisterUserUseCase) -> AccountView:
     display_name = extract_telegram_identity(message)
     return (
         await use_case.execute(
@@ -86,49 +84,37 @@ async def load_user(message: Message, use_case: IRegisterUserUseCase) -> User:
                 display_name=display_name,
             )
         )
-    ).user
+    ).account
 
 
 async def ensure_profile(
-    user: User,
+    account: AccountView,
     use_case: ISyncUserProfileUseCase,
     *,
     force: bool = False,
-) -> User:
-    if credentials_missing(user):
+) -> AccountView:
+    if not account.is_authed:
         raise RuntimeError("Credentials are required to sync profile.")
-    if not force and user.ssau.profile is not None:
-        return user
-    return (await use_case.execute(SyncUserProfileUseCaseInputDTO(user=user))).user
+    if not force and account.is_provisioned:
+        return account
+    return (await use_case.execute(SyncUserProfileUseCaseInputDTO(account=account))).account
 
 
 async def sync_cache(
-    uow_factory: Callable[[], IUnitOfWork],
     sync_service: IScheduleSyncService,
-    user: User,
+    account: AccountView,
     target_date: datetime,
     *,
-    max_age: timedelta | None = None,
     force: bool = False,
-):
-    async with uow_factory() as uow:
-        if force or max_age is None:
-            return (
-                await sync_service.sync_for_user(
-                    ScheduleSyncForUserInputDTO(
-                        uow=uow,
-                        user=user,
-                        target_date=target_date.date(),
-                    )
-                )
-            ).cache
+) -> CachedWeek:
+    if force:
         return (
-            await sync_service.sync_if_stale(
-                ScheduleSyncIfStaleInputDTO(
-                    uow=uow,
-                    user=user,
-                    target_date=target_date.date(),
-                    max_age=max_age,
-                )
+            await sync_service.sync_for_user(
+                ScheduleSyncForUserInputDTO(account=account, target_date=target_date.date())
             )
         ).cache
+    return (
+        await sync_service.sync_if_stale(
+            ScheduleSyncIfStaleInputDTO(account=account, target_date=target_date.date())
+        )
+    ).cache

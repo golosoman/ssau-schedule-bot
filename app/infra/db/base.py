@@ -22,5 +22,15 @@ class CreatedAtMixin:
     )
 
 
+class UpdatedAtMixin:
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now, onupdate=datetime.now, nullable=False
+    )
+
+
 class BaseTable(IdMixin, CreatedAtMixin, Base):
+    __abstract__ = True
+
+
+class TimestampedTable(IdMixin, CreatedAtMixin, UpdatedAtMixin, Base):
     __abstract__ = True

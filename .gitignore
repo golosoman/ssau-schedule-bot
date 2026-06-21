@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.so
+.mypy_cache
 
 # Poetry
 .venv/
@@ -22,3 +23,6 @@ envs/sensitive.env
 
 # db
 *.db
+
+# docs
+docs/

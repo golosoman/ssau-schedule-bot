@@ -1,11 +1,11 @@
 import json
-from typing import Any, cast
 from urllib.parse import unquote
 
 import pytest
 
-from app.infra.clients.ssau.auth_client import AuthClient
-from app.infra.clients.ssau.nextjs_login_scraper import NextJsLoginScraper
+from app.infra.clients.ssau.auth.client import SsauAuthClient
+from app.infra.clients.ssau.auth.scraper import NextJsLoginScraper
+from app.infra.clients.ssau.settings import SSAUClientSettings
 
 ACTION_ID = "60e1b506aa72f3dc090b62cc3f8ab44ef5c5569bc5"
 
@@ -97,10 +97,12 @@ class _FakeClient:
 @pytest.mark.asyncio
 async def test_fetch_login_metadata_uses_html_flight_without_chunk() -> None:
     fake_client = _FakeClient(_build_new_login_html())
-    auth_client = AuthClient(
-        client=cast(Any, fake_client),
+    auth_client = SsauAuthClient(
+        settings=SSAUClientSettings(base_url="https://lk.ssau.ru", timeout_seconds=15.0),
         scraper=NextJsLoginScraper(),
     )
+    # Inject a fake transport: the metadata fetch only relies on ``get``.
+    auth_client.get = fake_client.get  # type: ignore[method-assign]
 
     router_state, next_action, form_state, return_url = await auth_client._fetch_login_metadata()
     decoded_state = json.loads(unquote(router_state))

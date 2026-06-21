@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from app.app_layer.interfaces.telegram.renderer.dto import (
     RenderedTelegramMessage,
     TelegramEntity,
