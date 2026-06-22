@@ -27,4 +27,6 @@ COPY alembic.ini ./alembic.ini
 
 RUN poetry install --only main
 
-COPY data/ssau_schedule_bot.db /app/data/ssau_schedule_bot.db
+# БД в образ НЕ запекаем (файлы *.db gitignored — на хосте их нет после git reset).
+# Каталог под смонтированный том + результат миграций (`alembic upgrade head`).
+RUN mkdir -p /app/data

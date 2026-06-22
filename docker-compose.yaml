@@ -32,8 +32,12 @@ services:
       valkey:
         condition: service_healthy
     environment:
-      # ENV=prod -> грузит envs/prod.env, где VALKEY__HOST=valkey (имя сервиса).
-      - ENV=prod
+      # ENV выбирает env-файл (по умолчанию local); прод задаётся явно
+      # (Jenkinsfile передаёт -e ENV=prod). Локально: `make up ENV=dev`.
+      # VALKEY__HOST форсим на имя сервиса — из контейнера Valkey виден так
+      # (в env-файлах host=127.0.0.1 — это для запуска на ХОСТЕ).
+      - ENV=${ENV:-local}
+      - VALKEY__HOST=valkey
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -51,8 +55,12 @@ services:
       valkey:
         condition: service_healthy
     environment:
-      # ENV=prod -> грузит envs/prod.env, где VALKEY__HOST=valkey (имя сервиса).
-      - ENV=prod
+      # ENV выбирает env-файл (по умолчанию local); прод задаётся явно
+      # (Jenkinsfile передаёт -e ENV=prod). Локально: `make up ENV=dev`.
+      # VALKEY__HOST форсим на имя сервиса — из контейнера Valkey виден так
+      # (в env-файлах host=127.0.0.1 — это для запуска на ХОСТЕ).
+      - ENV=${ENV:-local}
+      - VALKEY__HOST=valkey
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -70,7 +78,11 @@ services:
       valkey:
         condition: service_healthy
     environment:
-      - ENV=prod
+      # ENV выбирает env-файл (по умолчанию local); прод задаётся явно
+      # (Jenkinsfile передаёт -e ENV=prod). Локально: `make up ENV=dev`.
+      # VALKEY__HOST форсим на имя сервиса — из контейнера Valkey виден так.
+      - ENV=${ENV:-local}
+      - VALKEY__HOST=valkey
     dns:
       - 1.1.1.1
       - 8.8.8.8

@@ -10,6 +10,7 @@ export ENV
 .PHONY: lint format format-check typecheck test check \
 	run-bot run-worker run-api \
 	db-upgrade db-downgrade db-history db-current db-stamp-initial \
+	up down logs ps \
 	create-environment delete-environment recreate-environment
 
 lint:
@@ -55,18 +56,36 @@ db-current:
 db-stamp-initial:
 	$(POETRY_RUN) alembic stamp 20260601_0001
 
+# --- docker-стек (ENV прокидывается в контейнеры) ---
+# ENV выбирает env-файл внутри контейнеров: `make up ENV=dev` поднимет стек
+# на dev-конфиге. По умолчанию ENV=local (см. начало файла). VALKEY__HOST
+# внутри docker форсится на `valkey` (см. docker-compose.yaml).
+
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
+
+ps:
+	docker compose ps
+
 # --- окружение целиком ---
 
 # Полностью поднять окружение: миграции (по ENV) + весь docker-стек
-# (valkey + bot + worker). Миграции прогоняются до старта сервисов.
+# (valkey + bot + worker + api). Миграции прогоняются до старта сервисов.
 create-environment:
 	$(POETRY_RUN) alembic upgrade head
-	docker compose up -d
+	docker compose up -d --build
 
-# Полностью снести окружение: контейнеры + тома + локальная SQLite-БД.
+# Полностью снести окружение: контейнеры + тома + SQLite-БД ТЕКУЩЕГО ENV
+# (путь берётся из settings.database.url, только для sqlite).
 delete-environment:
 	docker compose down -v
-	$(POETRY_RUN) python -c "from pathlib import Path; p = Path('data/ssau_schedule_bot.db'); p.exists() and p.unlink()"
+	$(POETRY_RUN) python -c "from app.settings.config import settings; from sqlalchemy.engine import make_url; from pathlib import Path; u = make_url(settings.database.url); p = Path(u.database) if u.get_backend_name() == 'sqlite' and u.database else None; p and p.exists() and p.unlink()"
 
 # Пересоздать окружение с нуля.
 recreate-environment: delete-environment create-environment

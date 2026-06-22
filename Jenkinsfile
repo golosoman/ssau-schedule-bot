@@ -99,12 +99,13 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e BACKUP_DIR="${BACKUP_DIR}" \
             -e BACKUP_KEEP="${BACKUP_KEEP}" \
             "${JENKINS_IMAGE}" sh -euxc '
               docker compose -f "${COMPOSE_FILE}" stop || true
 
-              if [ -f "data/ssau_schedule_bot.db" ]; then
+              if [ -f "data/ssau_schedule_bot.prod.db" ]; then
                 ts="$(date -u +%Y%m%dT%H%M%SZ)"
                 mkdir -p "${BACKUP_DIR}"
                 tar -czf "${BACKUP_DIR}/data-${ts}.tar.gz" data
@@ -114,7 +115,7 @@ pipeline {
                   | tail -n +$((BACKUP_KEEP + 1)) \
                   | xargs -r rm -f
               else
-                echo "Database file data/ssau_schedule_bot.db not found, backup skipped"
+                echo "Database file data/ssau_schedule_bot.prod.db not found, backup skipped"
               fi
 
               docker compose -f "${COMPOSE_FILE}" up -d --build
@@ -141,6 +142,7 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
               docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
@@ -167,6 +169,7 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
               docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
@@ -204,6 +207,7 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
               docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
@@ -230,6 +234,7 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             "${JENKINS_IMAGE}" sh -euxc '
               docker compose -f "${COMPOSE_FILE}" build "${DB_MIGRATION_SERVICE}"
@@ -256,6 +261,7 @@ pipeline {
             -v "${APP_DIR}:${APP_DIR}" \
             -w "${APP_DIR}" \
             -e COMPOSE_FILE="${COMPOSE_FILE}" \
+            -e ENV=prod \
             -e DB_MIGRATION_SERVICE="${DB_MIGRATION_SERVICE}" \
             -e DB_STAMP_REVISION="${DB_STAMP_REVISION}" \
             "${JENKINS_IMAGE}" sh -euxc '
