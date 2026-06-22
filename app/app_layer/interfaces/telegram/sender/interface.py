@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 
-from aiogram.types import InlineKeyboardMarkup
-
 from app.app_layer.interfaces.telegram.renderer.dto import RenderedTelegramMessage
+from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkup
 
 
 class ITelegramMessageSender(ABC):
@@ -12,6 +11,6 @@ class ITelegramMessageSender(ABC):
         chat_id: int,
         message: RenderedTelegramMessage,
         *,
-        reply_markup: InlineKeyboardMarkup | None = None,
+        reply_markup: TelegramReplyMarkup | None = None,
     ) -> None:
         raise NotImplementedError

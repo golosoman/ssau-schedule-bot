@@ -7,7 +7,7 @@ from app.api.jobs.utils import send_alert
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
-    ScheduleSyncIfStaleInputDTO,
+    ScheduleSyncForUserInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
@@ -61,8 +61,8 @@ async def run(
             token = set_request_id(f"worker-sync-{account.chat_id}")
             try:
                 now_local = _user_now(now_utc, timezone)
-                await sync_service.sync_if_stale(
-                    ScheduleSyncIfStaleInputDTO(account=account, target_date=now_local.date())
+                await sync_service.sync_for_user(
+                    ScheduleSyncForUserInputDTO(account=account, target_date=now_local.date())
                 )
                 tomorrow = now_local.date() + timedelta(days=1)
                 tomorrow_week = week_calculator.get_week_number(
@@ -78,8 +78,8 @@ async def run(
                     )
                 ).week_number
                 if tomorrow_week != current_week:
-                    await sync_service.sync_if_stale(
-                        ScheduleSyncIfStaleInputDTO(account=account, target_date=tomorrow)
+                    await sync_service.sync_for_user(
+                        ScheduleSyncForUserInputDTO(account=account, target_date=tomorrow)
                     )
                 metrics.observe_schedule_sync("success")
             except ValueError:

@@ -35,6 +35,10 @@ from app.app_layer.interfaces.services.schedule.week_calculator.interface import
     IWeekCalculatorService,
 )
 from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
+from app.app_layer.interfaces.telegram.sender.dto import (
+    TelegramInlineKeyboardButton,
+    TelegramReplyMarkup,
+)
 from app.app_layer.interfaces.telegram.sender.interface import ITelegramMessageSender
 from app.app_layer.interfaces.time.clock.interface import IClock
 from app.app_layer.interfaces.use_cases.register_user.interface import (
@@ -50,7 +54,6 @@ from app.domain.messages.info import InfoMessage
 from app.domain.messages.notification import NotificationMessage
 from app.domain.messages.schedule import ScheduleMessage
 from app.domain.value_objects.timezone import Timezone
-from app.infra.clients.telegram.keyboard_builder import TelegramKeyboardBuilder
 from app.logging.config import get_logger
 
 logger = get_logger(__name__)
@@ -331,10 +334,18 @@ async def handle_next(
         lesson_start=next_lesson.start_at,
     )
     rendered = renderer.render(notification_message)
-    reply_markup = None
+    reply_markup: TelegramReplyMarkup | None = None
     if next_lesson.lesson.conference_url:
-        reply_markup = TelegramKeyboardBuilder.conference(next_lesson.lesson.conference_url)
+        reply_markup = _conference_reply_markup(next_lesson.lesson.conference_url)
     await sender.send(message.chat.id, rendered, reply_markup=reply_markup)
+
+
+def _conference_reply_markup(url: str) -> TelegramReplyMarkup:
+    return TelegramReplyMarkup(
+        inline_keyboard=(
+            (TelegramInlineKeyboardButton(text="Открыть конференцию", url=url),),
+        )
+    )
 
 
 @router.message(Command("sync"))

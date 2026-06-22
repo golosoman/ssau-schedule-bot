@@ -1,12 +1,13 @@
 from collections.abc import Iterable
 
 from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
-from aiogram.types import InlineKeyboardMarkup, MessageEntity
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, MessageEntity
 
 from app.app_layer.interfaces.telegram.renderer.dto import (
     RenderedTelegramMessage,
     TelegramEntity,
 )
+from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkup
 from app.app_layer.interfaces.telegram.sender.interface import (
     ITelegramMessageSender,
 )
@@ -29,9 +30,10 @@ class TelegramMessageSender(ITelegramMessageSender):
         chat_id: int,
         message: RenderedTelegramMessage,
         *,
-        reply_markup: InlineKeyboardMarkup | None = None,
+        reply_markup: TelegramReplyMarkup | None = None,
     ) -> None:
         chunks = split_message(message, limit=TELEGRAM_MESSAGE_MAX_LENGTH)
+        aiogram_reply_markup = _to_aiogram_reply_markup(reply_markup)
         logger.info(
             "Telegram message prepared: chat_id=%s length=%s entities=%s chunks=%s",
             chat_id,
@@ -46,7 +48,7 @@ class TelegramMessageSender(ITelegramMessageSender):
             await self._send_chunk(
                 chat_id,
                 chunk,
-                reply_markup=reply_markup if index == 0 else None,
+                reply_markup=aiogram_reply_markup if index == 0 else None,
             )
 
     async def _send_chunk(
@@ -96,3 +98,21 @@ def _to_aiogram_entities(entities: Iterable[TelegramEntity]) -> list[MessageEnti
         )
         for entity in entities
     ]
+
+
+def _to_aiogram_reply_markup(markup: TelegramReplyMarkup | None) -> InlineKeyboardMarkup | None:
+    if markup is None:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=button.text,
+                    url=button.url,
+                    callback_data=button.callback_data,
+                )
+                for button in row
+            ]
+            for row in markup.inline_keyboard
+        ]
+    )
