@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.http.ssau.api.dto.fetched import FetchedSsauProfile
+from app.app_layer.interfaces.http.ssau.api.dto import FetchedSsauProfileDTO
 from app.domain.entities.lesson import Lesson
 
 
@@ -21,5 +21,5 @@ class ISsauApiClient(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def fetch_profile(self, login: str, password: str) -> FetchedSsauProfile:
+    async def fetch_profile(self, login: str, password: str) -> FetchedSsauProfileDTO:
         raise NotImplementedError

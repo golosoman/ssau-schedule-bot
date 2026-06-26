@@ -3,10 +3,8 @@ from collections.abc import Callable
 from app.app_layer.interfaces.repos.account.dto import SsauIdentityCreateDTO
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.update_user_credentials.dto.input import (
+from app.app_layer.interfaces.use_cases.update_user_credentials.dto import (
     UpdateUserCredentialsUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.update_user_credentials.dto.output import (
     UpdateUserCredentialsUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.update_user_credentials.interface import (

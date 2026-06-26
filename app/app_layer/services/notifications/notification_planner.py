@@ -2,33 +2,31 @@ from datetime import UTC, datetime, timedelta
 
 from app.app_layer.interfaces.cache.schedule.interface import IScheduleCacheStore
 from app.app_layer.interfaces.notifications.lesson_notification.dto import (
-    LessonNotification,
+    LessonNotificationDTO,
 )
 from app.app_layer.interfaces.repos.notification_log.interface import (
     INotificationLogRepository,
 )
-from app.app_layer.interfaces.services.notifications.notification_planner.dto.input import (
+from app.app_layer.interfaces.services.notifications.notification_planner.dto import (
     NotificationPlannerCollectDueInputDTO,
-    NotificationPlannerMarkSentInputDTO,
-)
-from app.app_layer.interfaces.services.notifications.notification_planner.dto.output import (
     NotificationPlannerCollectDueOutputDTO,
+    NotificationPlannerMarkSentInputDTO,
 )
 from app.app_layer.interfaces.services.notifications.notification_planner.interface import (
     INotificationPlannerService,
 )
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+from app.app_layer.interfaces.services.schedule.week_calculator.dto import (
     WeekCalculatorServiceInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
     IWeekCalculatorService,
 )
-from app.domain.value_objects.notification_type import NotificationType
+from app.domain.value_objects.notification_type import NotificationTypeEnum
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.timezone import Timezone
 
-BEFORE_START_NOTIFICATION_TYPE = NotificationType.BEFORE_START
-AT_START_NOTIFICATION_TYPE = NotificationType.AT_START
+BEFORE_START_NOTIFICATION_TYPE = NotificationTypeEnum.BEFORE_START
+AT_START_NOTIFICATION_TYPE = NotificationTypeEnum.AT_START
 
 
 class NotificationPlanner(INotificationPlannerService):
@@ -67,7 +65,7 @@ class NotificationPlanner(INotificationPlannerService):
         if cache is None:
             return NotificationPlannerCollectDueOutputDTO(notifications=[])
 
-        due: list[LessonNotification] = []
+        due: list[LessonNotificationDTO] = []
         today = now_local.date()
         for lesson in cache.lessons:
             if lesson.weekday != now_local.isoweekday():
@@ -101,7 +99,7 @@ class NotificationPlanner(INotificationPlannerService):
                 continue
 
             due.append(
-                LessonNotification(
+                LessonNotificationDTO(
                     account=account,
                     lesson=lesson,
                     lesson_start=lesson_start,
@@ -145,7 +143,7 @@ def _resolve_notification_type(
     lesson_start: datetime,
     lesson_end: datetime,
     lead_minutes: int,
-) -> NotificationType | None:
+) -> NotificationTypeEnum | None:
     notify_time = lesson_start - timedelta(minutes=lead_minutes)
     if notify_time <= now < lesson_start:
         return BEFORE_START_NOTIFICATION_TYPE

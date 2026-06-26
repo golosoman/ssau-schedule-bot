@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.notifications.notification_planner.dto.input import (
+from app.app_layer.interfaces.services.notifications.notification_planner.dto import (
     NotificationPlannerCollectDueInputDTO,
-    NotificationPlannerMarkSentInputDTO,
-)
-from app.app_layer.interfaces.services.notifications.notification_planner.dto.output import (
     NotificationPlannerCollectDueOutputDTO,
+    NotificationPlannerMarkSentInputDTO,
 )
 
 

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.use_cases.list_accounts.dto.output import (
+from app.app_layer.interfaces.use_cases.list_accounts.dto import (
     ListAccountsUseCaseOutputDTO,
 )
 

@@ -2,12 +2,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class TelegramInlineKeyboardButton:
+class TelegramInlineKeyboardButtonDTO:
     text: str
     url: str | None = None
     callback_data: str | None = None
 
 
 @dataclass(frozen=True)
-class TelegramReplyMarkup:
-    inline_keyboard: tuple[tuple[TelegramInlineKeyboardButton, ...], ...]
+class TelegramReplyMarkupDTO:
+    inline_keyboard: tuple[tuple[TelegramInlineKeyboardButtonDTO, ...], ...]

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.app_layer.interfaces.use_cases.send_admin_message.dto.output import (
+from app.app_layer.interfaces.use_cases.send_admin_message.dto import (
     SendAdminMessageUseCaseOutputDTO,
 )
 

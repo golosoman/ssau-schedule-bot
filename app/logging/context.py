@@ -26,8 +26,7 @@ class ContextFactory(Protocol):
         func: Callable[..., Any],
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
-    ) -> dict[str, Any]:
-        ...
+    ) -> dict[str, Any]: ...
 
 
 class LoggingContext:

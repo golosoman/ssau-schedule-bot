@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeekDTO
 
 
 class IScheduleCacheStore(ABC):
@@ -10,9 +10,9 @@ class IScheduleCacheStore(ABC):
     """
 
     @abstractmethod
-    async def get(self, account_id: int, week_number: int) -> CachedWeek | None:
+    async def get(self, account_id: int, week_number: int) -> CachedWeekDTO | None:
         raise NotImplementedError
 
     @abstractmethod
-    async def set(self, account_id: int, week_number: int, week: CachedWeek) -> None:
+    async def set(self, account_id: int, week_number: int, week: CachedWeekDTO) -> None:
         raise NotImplementedError

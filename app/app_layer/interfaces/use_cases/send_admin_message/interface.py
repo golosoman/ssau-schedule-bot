@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.use_cases.send_admin_message.dto.input import (
+from app.app_layer.interfaces.use_cases.send_admin_message.dto import (
     SendAdminMessageUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.send_admin_message.dto.output import (
     SendAdminMessageUseCaseOutputDTO,
 )
 

@@ -4,10 +4,10 @@ from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, MessageEntity
 
 from app.app_layer.interfaces.telegram.renderer.dto import (
-    RenderedTelegramMessage,
-    TelegramEntity,
+    RenderedTelegramMessageDTO,
+    TelegramEntityDTO,
 )
-from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkup
+from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkupDTO
 from app.app_layer.interfaces.telegram.sender.interface import (
     ITelegramMessageSender,
 )
@@ -28,9 +28,9 @@ class TelegramMessageSender(ITelegramMessageSender):
     async def send(
         self,
         chat_id: int,
-        message: RenderedTelegramMessage,
+        message: RenderedTelegramMessageDTO,
         *,
-        reply_markup: TelegramReplyMarkup | None = None,
+        reply_markup: TelegramReplyMarkupDTO | None = None,
     ) -> None:
         chunks = split_message(message, limit=TELEGRAM_MESSAGE_MAX_LENGTH)
         aiogram_reply_markup = _to_aiogram_reply_markup(reply_markup)
@@ -54,7 +54,7 @@ class TelegramMessageSender(ITelegramMessageSender):
     async def _send_chunk(
         self,
         chat_id: int,
-        chunk: RenderedTelegramMessage,
+        chunk: RenderedTelegramMessageDTO,
         *,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> None:
@@ -87,7 +87,7 @@ class TelegramMessageSender(ITelegramMessageSender):
         )
 
 
-def _to_aiogram_entities(entities: Iterable[TelegramEntity]) -> list[MessageEntity]:
+def _to_aiogram_entities(entities: Iterable[TelegramEntityDTO]) -> list[MessageEntity]:
     return [
         MessageEntity(
             type=entity.type,
@@ -100,7 +100,7 @@ def _to_aiogram_entities(entities: Iterable[TelegramEntity]) -> list[MessageEnti
     ]
 
 
-def _to_aiogram_reply_markup(markup: TelegramReplyMarkup | None) -> InlineKeyboardMarkup | None:
+def _to_aiogram_reply_markup(markup: TelegramReplyMarkupDTO | None) -> InlineKeyboardMarkup | None:
     if markup is None:
         return None
     return InlineKeyboardMarkup(

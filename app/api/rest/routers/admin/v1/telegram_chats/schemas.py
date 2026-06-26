@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 
-from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResult
-from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatus
-from app.app_layer.interfaces.use_cases.check_telegram_chats.dto.output import (
+from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResultDTO
+from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatusEnum
+from app.app_layer.interfaces.use_cases.check_telegram_chats.dto import (
     CheckTelegramChatsUseCaseOutputDTO,
 )
 
@@ -13,11 +13,11 @@ class V1CheckTelegramChatsInputSchema(BaseModel):
 
 class V1TelegramChatCheckResultSchema(BaseModel):
     chat_id: int
-    status: TelegramChatCheckStatus
+    status: TelegramChatCheckStatusEnum
     detail: str | None
 
     @classmethod
-    def from_dto(cls, dto: TelegramChatCheckResult) -> "V1TelegramChatCheckResultSchema":
+    def from_dto(cls, dto: TelegramChatCheckResultDTO) -> "V1TelegramChatCheckResultSchema":
         return cls(chat_id=dto.chat_id, status=dto.status, detail=dto.detail)
 
 

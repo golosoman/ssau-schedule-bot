@@ -4,8 +4,8 @@ from aiogram.types import MessageEntity
 from aiogram.utils.formatting import Bold, Code, Italic, Text, TextLink
 
 from app.app_layer.interfaces.telegram.renderer.dto import (
-    RenderedTelegramMessage,
-    TelegramEntity,
+    RenderedTelegramMessageDTO,
+    TelegramEntityDTO,
 )
 from app.app_layer.interfaces.telegram.renderer.interface import ITelegramMessageRenderer
 from app.domain.entities.lesson import Lesson
@@ -22,7 +22,7 @@ def _make_link(text: str, url: str) -> Text:
 
 
 class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
-    def render(self, message: TelegramMessage) -> RenderedTelegramMessage:
+    def render(self, message: TelegramMessage) -> RenderedTelegramMessageDTO:
         if isinstance(message, ScheduleMessage):
             return self._render_schedule(message)
         if isinstance(message, NotificationMessage):
@@ -36,10 +36,10 @@ class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
         raise TypeError(f"Unsupported message type: {type(message)!r}")
 
     @staticmethod
-    def _render_plain(message: PlainMessage) -> RenderedTelegramMessage:
+    def _render_plain(message: PlainMessage) -> RenderedTelegramMessageDTO:
         return AiogramTelegramMessageRenderer._as_rendered(Text(message.text))
 
-    def _render_schedule(self, message: ScheduleMessage) -> RenderedTelegramMessage:
+    def _render_schedule(self, message: ScheduleMessage) -> RenderedTelegramMessageDTO:
         parts: list[object] = [
             Bold(message.title),
             "\n",
@@ -56,7 +56,7 @@ class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
             parts.extend(["\n\n", self._lesson_card(lesson, include_time=True)])
         return self._as_rendered(Text(*parts))
 
-    def _render_notification(self, message: NotificationMessage) -> RenderedTelegramMessage:
+    def _render_notification(self, message: NotificationMessage) -> RenderedTelegramMessageDTO:
         start_label = message.lesson_start.strftime("%Y-%m-%d %H:%M")
         parts: list[object] = [
             Bold(message.title),
@@ -68,14 +68,14 @@ class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
         ]
         return self._as_rendered(Text(*parts))
 
-    def _render_info(self, message: InfoMessage) -> RenderedTelegramMessage:
+    def _render_info(self, message: InfoMessage) -> RenderedTelegramMessageDTO:
         parts: list[object] = [Bold(message.title)]
         if message.lines:
             parts.append("\n")
             parts.extend(self._bulleted_lines(message.lines))
         return self._as_rendered(Text(*parts))
 
-    def _render_error(self, message: ErrorMessage) -> RenderedTelegramMessage:
+    def _render_error(self, message: ErrorMessage) -> RenderedTelegramMessageDTO:
         parts: list[object] = [Bold(message.title)]
         if message.details:
             parts.append("\n")
@@ -121,14 +121,14 @@ class AiogramTelegramMessageRenderer(ITelegramMessageRenderer):
         return parts
 
     @staticmethod
-    def _as_rendered(text: Text) -> RenderedTelegramMessage:
+    def _as_rendered(text: Text) -> RenderedTelegramMessageDTO:
         payload = text.as_kwargs()
         entities = tuple(_to_entity(entity) for entity in payload.get("entities", []))
-        return RenderedTelegramMessage(text=payload["text"], entities=entities)
+        return RenderedTelegramMessageDTO(text=payload["text"], entities=entities)
 
 
-def _to_entity(entity: MessageEntity) -> TelegramEntity:
-    return TelegramEntity(
+def _to_entity(entity: MessageEntity) -> TelegramEntityDTO:
+    return TelegramEntityDTO(
         type=str(entity.type),
         offset=entity.offset,
         length=entity.length,

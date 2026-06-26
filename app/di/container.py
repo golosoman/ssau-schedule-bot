@@ -41,6 +41,7 @@ class Container(containers.DeclarativeContainer):
         repositories=repositories,
         ssau=ssau,
         telegram=telegram,
+        services=services,
     )
 
 

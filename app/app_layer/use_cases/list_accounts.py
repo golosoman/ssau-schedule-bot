@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.list_accounts.dto.output import (
+from app.app_layer.interfaces.use_cases.list_accounts.dto import (
     ListAccountsUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.list_accounts.interface import IListAccountsUseCase

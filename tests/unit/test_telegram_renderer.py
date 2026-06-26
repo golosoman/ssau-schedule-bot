@@ -1,6 +1,9 @@
 from datetime import date, time
 
-from app.app_layer.interfaces.telegram.renderer.dto import RenderedTelegramMessage, TelegramEntity
+from app.app_layer.interfaces.telegram.renderer.dto import (
+    RenderedTelegramMessageDTO,
+    TelegramEntityDTO,
+)
 from app.domain.entities.lesson import Lesson
 from app.domain.messages.info import InfoMessage
 from app.domain.messages.schedule import ScheduleMessage
@@ -39,7 +42,7 @@ def test_renderer_schedule_formatting() -> None:
 
 def test_split_message_respects_limit() -> None:
     text = "line\n" * 30
-    message = RenderedTelegramMessage(text=text)
+    message = RenderedTelegramMessageDTO(text=text)
 
     chunks = split_message(message, limit=50)
 
@@ -50,8 +53,8 @@ def test_split_message_respects_limit() -> None:
 
 def test_split_message_slices_entities() -> None:
     text = "0123456789ABCDEFGHIJ"
-    entity = TelegramEntity(type="bold", offset=5, length=10)
-    message = RenderedTelegramMessage(text=text, entities=(entity,))
+    entity = TelegramEntityDTO(type="bold", offset=5, length=10)
+    message = RenderedTelegramMessageDTO(text=text, entities=(entity,))
 
     chunks = split_message(message, limit=10)
 

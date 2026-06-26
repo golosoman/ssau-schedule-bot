@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.use_cases.register_user.dto.input import (
+from app.app_layer.interfaces.use_cases.register_user.dto import (
     RegisterUserUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.register_user.dto.output import (
     RegisterUserUseCaseOutputDTO,
 )
 

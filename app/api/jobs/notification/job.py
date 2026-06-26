@@ -5,7 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from app.api.jobs.utils import send_alert
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
-from app.app_layer.interfaces.services.notifications.notification_service.dto.input import (
+from app.app_layer.interfaces.services.notifications.notification_service.dto import (
     NotificationServiceInputDTO,
 )
 from app.app_layer.interfaces.services.notifications.notification_service.interface import (

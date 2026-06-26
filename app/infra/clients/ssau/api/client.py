@@ -2,9 +2,12 @@ from typing import Any
 
 import httpx
 
-from app.app_layer.interfaces.http.ssau.api.dto.fetched import FetchedSsauProfile
-from app.app_layer.interfaces.http.ssau.api.dto.profile import GroupDto, UnifiedYearDto
-from app.app_layer.interfaces.http.ssau.api.dto.schedule import ScheduleResponseDto
+from app.app_layer.interfaces.http.ssau.api.dto import (
+    FetchedSsauProfileDTO,
+    GroupDTO,
+    ScheduleResponseDTO,
+    UnifiedYearDTO,
+)
 from app.app_layer.interfaces.http.ssau.api.interface import ISsauApiClient
 from app.app_layer.interfaces.http.ssau.auth.interface import ISsauAuthClient
 from app.domain.constants import DEFAULT_USER_TYPE
@@ -91,12 +94,12 @@ class SsauApiClient(BaseHttpClient, ISsauApiClient):
             },
         )
         response.raise_for_status()
-        data = ScheduleResponseDto.model_validate(response.json())
+        data = ScheduleResponseDTO.model_validate(response.json())
         return map_schedule(data)
 
     # --- ISsauApiClient: profile ---
 
-    async def fetch_profile(self, login: str, password: str) -> FetchedSsauProfile:
+    async def fetch_profile(self, login: str, password: str) -> FetchedSsauProfileDTO:
         groups = await self._fetch_groups(login, password)
         if not groups:
             raise RuntimeError("SSAU groups list is empty.")
@@ -114,7 +117,7 @@ class SsauApiClient(BaseHttpClient, ISsauApiClient):
             year.start_date,
         )
 
-        return FetchedSsauProfile(
+        return FetchedSsauProfileDTO(
             group_id=GroupId(value=group.id),
             year_id=YearId(value=year.id),
             group_name=group.name,
@@ -122,7 +125,7 @@ class SsauApiClient(BaseHttpClient, ISsauApiClient):
             user_type=DEFAULT_USER_TYPE,
         )
 
-    async def _fetch_groups(self, login: str, password: str) -> list[GroupDto]:
+    async def _fetch_groups(self, login: str, password: str) -> list[GroupDTO]:
         response = await self._get_authenticated(
             login=login,
             password=password,
@@ -130,9 +133,9 @@ class SsauApiClient(BaseHttpClient, ISsauApiClient):
         )
         response.raise_for_status()
         data = response.json()
-        return [GroupDto.model_validate(item) for item in data]
+        return [GroupDTO.model_validate(item) for item in data]
 
-    async def _fetch_years(self, login: str, password: str) -> list[UnifiedYearDto]:
+    async def _fetch_years(self, login: str, password: str) -> list[UnifiedYearDTO]:
         response = await self._get_authenticated(
             login=login,
             password=password,
@@ -141,10 +144,10 @@ class SsauApiClient(BaseHttpClient, ISsauApiClient):
         )
         response.raise_for_status()
         data = response.json()
-        return [UnifiedYearDto.model_validate(item) for item in data]
+        return [UnifiedYearDTO.model_validate(item) for item in data]
 
     @staticmethod
-    def _select_year(years: list[UnifiedYearDto]) -> UnifiedYearDto:
+    def _select_year(years: list[UnifiedYearDTO]) -> UnifiedYearDTO:
         for item in years:
             if item.is_current:
                 return item

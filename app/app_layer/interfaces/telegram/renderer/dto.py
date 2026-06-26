@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class TelegramEntity:
+class TelegramEntityDTO:
     type: str
     offset: int
     length: int
@@ -11,9 +11,9 @@ class TelegramEntity:
 
 
 @dataclass(frozen=True)
-class RenderedTelegramMessage:
+class RenderedTelegramMessageDTO:
     text: str
-    entities: tuple[TelegramEntity, ...] = ()
+    entities: tuple[TelegramEntityDTO, ...] = ()
 
     @property
     def length(self) -> int:

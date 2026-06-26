@@ -1,7 +1,5 @@
-from app.app_layer.interfaces.services.schedule.daily_schedule.dto.input import (
+from app.app_layer.interfaces.services.schedule.daily_schedule.dto import (
     DailyScheduleServiceInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.daily_schedule.dto.output import (
     DailyScheduleServiceOutputDTO,
 )
 from app.app_layer.interfaces.services.schedule.daily_schedule.interface import (

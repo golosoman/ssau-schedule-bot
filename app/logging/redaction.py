@@ -2,9 +2,7 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-REDACT_PATTERNS = (
-    re.compile(r"(?i)(password|token|secret|auth_cookie|cookie)=([^\s]+)"),
-)
+REDACT_PATTERNS = (re.compile(r"(?i)(password|token|secret|auth_cookie|cookie)=([^\s]+)"),)
 SENSITIVE_KEYS = frozenset({"password", "token", "secret", "auth_cookie", "cookie", "api_key"})
 
 

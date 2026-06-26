@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.schedule.lesson_date_resolver.dto.input import (
+from app.app_layer.interfaces.services.schedule.lesson_date_resolver.dto import (
     LessonDateResolverServiceInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.lesson_date_resolver.dto.output import (
     LessonDateResolverServiceOutputDTO,
 )
 

@@ -2,16 +2,14 @@ from collections.abc import Callable
 
 from app.app_layer.interfaces.repos.account.dto import (
     AccountSettingsCreateDTO,
-    AccountView,
+    AccountViewDTO,
     TelegramIdentityCreateDTO,
     TelegramIdentityUpdateDTO,
 )
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.register_user.dto.input import (
+from app.app_layer.interfaces.use_cases.register_user.dto import (
     RegisterUserUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.register_user.dto.output import (
     RegisterUserUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.register_user.interface import (
@@ -66,7 +64,7 @@ class RegisterUserUseCase(IRegisterUserUseCase):
             )
 
 
-async def _require_view(account_repo: IAccountRepository, chat_id: int) -> AccountView:
+async def _require_view(account_repo: IAccountRepository, chat_id: int) -> AccountViewDTO:
     view = await account_repo.get_by_chat_id(chat_id)
     if view is None:
         raise RuntimeError("Account not found after write.")

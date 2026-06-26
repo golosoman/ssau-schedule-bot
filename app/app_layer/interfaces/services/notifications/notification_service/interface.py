@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.notifications.notification_service.dto.input import (
+from app.app_layer.interfaces.services.notifications.notification_service.dto import (
     NotificationServiceInputDTO,
-)
-from app.app_layer.interfaces.services.notifications.notification_service.dto.output import (
     NotificationServiceOutputDTO,
 )
 

@@ -1,23 +1,23 @@
 from datetime import datetime
 
-from aiogram.types import Message
+from aiogram.types import ForceReply, Message
 
-from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
-from app.app_layer.interfaces.repos.account.dto import AccountView
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeekDTO
+from app.app_layer.interfaces.repos.account.dto import AccountViewDTO
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto import (
     ScheduleSyncForUserInputDTO,
     ScheduleSyncIfStaleInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
 )
-from app.app_layer.interfaces.use_cases.register_user.dto.input import (
+from app.app_layer.interfaces.use_cases.register_user.dto import (
     RegisterUserUseCaseInputDTO,
 )
 from app.app_layer.interfaces.use_cases.register_user.interface import (
     IRegisterUserUseCase,
 )
-from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
+from app.app_layer.interfaces.use_cases.sync_user_profile.dto import (
     SyncUserProfileUseCaseInputDTO,
 )
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (
@@ -33,20 +33,27 @@ def command_args(message: Message) -> list[str]:
     return message.text.split()[1:]
 
 
+async def prompt_for_input(message: Message, text: str, placeholder: str) -> None:
+    """ForceReply-промпт: фокусирует поле ввода с подсказкой-плейсхолдером.
+
+    Используется для команд с аргументами — чтобы пользователь дописал значение
+    вместо мгновенной отправки голой команды.
+    """
+    await message.answer(text, reply_markup=ForceReply(input_field_placeholder=placeholder))
+
+
 def user_now(now_utc: datetime, timezone: Timezone) -> datetime:
     zone = timezone.tzinfo()
     return now_utc.astimezone(zone)
 
 
-def build_status_message(account: AccountView) -> InfoMessage:
+def build_status_message(account: AccountViewDTO) -> InfoMessage:
     profile = account.ssau_profile
     group_label = profile.group_name if profile is not None else "не определена"
     subgroup_label = str(profile.subgroup) if profile is not None else "не определена"
     user_type_label = profile.user_type if profile is not None else "не определен"
     creds = "есть" if account.is_authed else "нет"
-    notify_status = (
-        "включены" if account.settings.schedule_notifications_enabled else "выключены"
-    )
+    notify_status = "включены" if account.settings.schedule_notifications_enabled else "выключены"
     lines = [
         f"Группа: {group_label}",
         f"Подгруппа: {subgroup_label}",
@@ -69,11 +76,11 @@ def extract_telegram_identity(message: Message) -> str:
     return display_name
 
 
-def credentials_missing(account: AccountView) -> bool:
+def credentials_missing(account: AccountViewDTO) -> bool:
     return not account.is_authed
 
 
-async def load_account(message: Message, use_case: IRegisterUserUseCase) -> AccountView:
+async def load_account(message: Message, use_case: IRegisterUserUseCase) -> AccountViewDTO:
     display_name = extract_telegram_identity(message)
     return (
         await use_case.execute(
@@ -86,11 +93,11 @@ async def load_account(message: Message, use_case: IRegisterUserUseCase) -> Acco
 
 
 async def ensure_profile(
-    account: AccountView,
+    account: AccountViewDTO,
     use_case: ISyncUserProfileUseCase,
     *,
     force: bool = False,
-) -> AccountView:
+) -> AccountViewDTO:
     if not account.is_authed:
         raise RuntimeError("Credentials are required to sync profile.")
     if not force and account.is_provisioned:
@@ -100,11 +107,11 @@ async def ensure_profile(
 
 async def sync_cache(
     sync_service: IScheduleSyncService,
-    account: AccountView,
+    account: AccountViewDTO,
     target_date: datetime,
     *,
     force: bool = False,
-) -> CachedWeek:
+) -> CachedWeekDTO:
     if force:
         return (
             await sync_service.sync_for_user(

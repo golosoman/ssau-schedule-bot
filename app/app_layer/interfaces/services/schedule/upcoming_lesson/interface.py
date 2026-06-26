@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.input import (
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto import (
     UpcomingLessonServiceInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.output import (
     UpcomingLessonServiceOutputDTO,
 )
 

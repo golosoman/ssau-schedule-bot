@@ -2,8 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.app_layer.interfaces.repos.account.dto import AccountView
-from app.app_layer.interfaces.use_cases.list_accounts.dto.output import (
+from app.app_layer.interfaces.repos.account.dto import AccountViewDTO
+from app.app_layer.interfaces.use_cases.list_accounts.dto import (
     ListAccountsUseCaseOutputDTO,
 )
 
@@ -21,7 +21,7 @@ class V1AccountOutputSchema(BaseModel):
     subgroup: str | None
 
     @classmethod
-    def from_view(cls, view: AccountView) -> "V1AccountOutputSchema":
+    def from_view(cls, view: AccountViewDTO) -> "V1AccountOutputSchema":
         profile = view.ssau_profile
         return cls(
             id=view.account_id,

@@ -6,10 +6,8 @@ from app.app_layer.interfaces.repos.account.dto import (
 )
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.update_user_settings.dto.input import (
+from app.app_layer.interfaces.use_cases.update_user_settings.dto import (
     UpdateUserSettingsUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.update_user_settings.dto.output import (
     UpdateUserSettingsUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.update_user_settings.interface import (

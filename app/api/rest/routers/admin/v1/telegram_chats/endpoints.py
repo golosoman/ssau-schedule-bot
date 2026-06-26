@@ -7,7 +7,7 @@ from app.api.rest.routers.admin.v1.telegram_chats.schemas import (
     V1CheckTelegramChatsInputSchema,
     V1CheckTelegramChatsOutputSchema,
 )
-from app.app_layer.interfaces.use_cases.check_telegram_chats.dto.input import (
+from app.app_layer.interfaces.use_cases.check_telegram_chats.dto import (
     CheckTelegramChatsUseCaseInputDTO,
 )
 from app.app_layer.interfaces.use_cases.check_telegram_chats.interface import (
@@ -28,8 +28,5 @@ async def check_telegram_chats(
     ],
 ) -> V1CheckTelegramChatsOutputSchema:
     """Тихо проверить доступность Telegram-чатов через getChat."""
-    result = await use_case.execute(
-        CheckTelegramChatsUseCaseInputDTO(chat_ids=body.chat_ids)
-    )
+    result = await use_case.execute(CheckTelegramChatsUseCaseInputDTO(chat_ids=body.chat_ids))
     return V1CheckTelegramChatsOutputSchema.from_use_case_dto(result)
-

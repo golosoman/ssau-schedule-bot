@@ -37,14 +37,10 @@ async def test_sqlite_account_repository_roundtrip(tmp_path) -> None:
     async with SqlAlchemyUnitOfWork(session_factory):
         account = await account_repo.create_account()
         await account_repo.create_telegram_identity(
-            TelegramIdentityCreateDTO(
-                account_id=account.id, chat_id=100, display_name="tester"
-            )
+            TelegramIdentityCreateDTO(account_id=account.id, chat_id=100, display_name="tester")
         )
         await account_repo.create_settings(
-            AccountSettingsCreateDTO(
-                account_id=account.id, schedule_notifications_enabled=True
-            )
+            AccountSettingsCreateDTO(account_id=account.id, schedule_notifications_enabled=True)
         )
         identity = await account_repo.create_ssau_identity(
             SsauIdentityCreateDTO(account_id=account.id, login="login", password="secret")

@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.use_cases.check_telegram_chats.dto.input import (
+from app.app_layer.interfaces.use_cases.check_telegram_chats.dto import (
     CheckTelegramChatsUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.check_telegram_chats.dto.output import (
     CheckTelegramChatsUseCaseOutputDTO,
 )
 
@@ -15,4 +13,3 @@ class ICheckTelegramChatsUseCase(ABC):
         input_dto: CheckTelegramChatsUseCaseInputDTO,
     ) -> CheckTelegramChatsUseCaseOutputDTO:
         raise NotImplementedError
-

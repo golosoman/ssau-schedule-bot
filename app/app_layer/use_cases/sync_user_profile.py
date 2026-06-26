@@ -7,10 +7,8 @@ from app.app_layer.interfaces.repos.account.dto import (
 )
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
 from app.app_layer.interfaces.uow.unit_of_work.interface import IUnitOfWork
-from app.app_layer.interfaces.use_cases.sync_user_profile.dto.input import (
+from app.app_layer.interfaces.use_cases.sync_user_profile.dto import (
     SyncUserProfileUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.sync_user_profile.dto.output import (
     SyncUserProfileUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.sync_user_profile.interface import (

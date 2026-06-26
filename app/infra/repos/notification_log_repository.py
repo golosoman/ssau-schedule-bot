@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.app_layer.interfaces.repos.notification_log.interface import (
     INotificationLogRepository,
 )
-from app.domain.value_objects.notification_type import NotificationType
+from app.domain.value_objects.notification_type import NotificationTypeEnum
 from app.infra.db.models import NotificationLogModel
 from app.infra.repos.base import BaseSqlAlchemyRepository
 
@@ -16,7 +16,7 @@ class SqlAlchemyNotificationLogRepository(BaseSqlAlchemyRepository, INotificatio
         account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: NotificationType,
+        notification_type: NotificationTypeEnum,
     ) -> bool:
         result = await self._session.execute(
             select(NotificationLogModel.id).where(
@@ -33,7 +33,7 @@ class SqlAlchemyNotificationLogRepository(BaseSqlAlchemyRepository, INotificatio
         account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: NotificationType,
+        notification_type: NotificationTypeEnum,
         sent_at: datetime,
     ) -> None:
         model = NotificationLogModel(

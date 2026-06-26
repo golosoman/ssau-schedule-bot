@@ -1,19 +1,19 @@
 from app.app_layer.interfaces.telegram.renderer.dto import (
-    RenderedTelegramMessage,
-    TelegramEntity,
+    RenderedTelegramMessageDTO,
+    TelegramEntityDTO,
 )
 from app.domain.constants import TELEGRAM_MESSAGE_MAX_LENGTH
 
 
 def split_message(
-    message: RenderedTelegramMessage,
+    message: RenderedTelegramMessageDTO,
     *,
     limit: int = TELEGRAM_MESSAGE_MAX_LENGTH,
-) -> list[RenderedTelegramMessage]:
+) -> list[RenderedTelegramMessageDTO]:
     if message.length <= limit:
         return [message]
 
-    chunks: list[RenderedTelegramMessage] = []
+    chunks: list[RenderedTelegramMessageDTO] = []
     start = 0
     text = message.text
     entities = message.entities
@@ -22,7 +22,7 @@ def split_message(
         max_end = min(start + limit, len(text))
         if max_end == len(text):
             chunks.append(
-                RenderedTelegramMessage(
+                RenderedTelegramMessageDTO(
                     text=text[start:max_end],
                     entities=_slice_entities(entities, start, max_end),
                 )
@@ -34,7 +34,7 @@ def split_message(
             split_at = max_end
 
         chunks.append(
-            RenderedTelegramMessage(
+            RenderedTelegramMessageDTO(
                 text=text[start:split_at],
                 entities=_slice_entities(entities, start, split_at),
             )
@@ -46,7 +46,7 @@ def split_message(
 
 def _find_split_point(
     text: str,
-    entities: tuple[TelegramEntity, ...],
+    entities: tuple[TelegramEntityDTO, ...],
     start: int,
     max_end: int,
 ) -> int:
@@ -60,7 +60,7 @@ def _find_split_point(
     return max_end
 
 
-def _is_boundary_safe(position: int, entities: tuple[TelegramEntity, ...]) -> bool:
+def _is_boundary_safe(position: int, entities: tuple[TelegramEntityDTO, ...]) -> bool:
     for entity in entities:
         start = entity.offset
         end = entity.offset + entity.length
@@ -70,11 +70,11 @@ def _is_boundary_safe(position: int, entities: tuple[TelegramEntity, ...]) -> bo
 
 
 def _slice_entities(
-    entities: tuple[TelegramEntity, ...],
+    entities: tuple[TelegramEntityDTO, ...],
     chunk_start: int,
     chunk_end: int,
-) -> tuple[TelegramEntity, ...]:
-    sliced: list[TelegramEntity] = []
+) -> tuple[TelegramEntityDTO, ...]:
+    sliced: list[TelegramEntityDTO] = []
     for entity in entities:
         entity_start = entity.offset
         entity_end = entity.offset + entity.length
@@ -83,7 +83,7 @@ def _slice_entities(
         slice_start = max(entity_start, chunk_start)
         slice_end = min(entity_end, chunk_end)
         sliced.append(
-            TelegramEntity(
+            TelegramEntityDTO(
                 type=entity.type,
                 offset=slice_start - chunk_start,
                 length=slice_end - slice_start,

@@ -1,4 +1,4 @@
-from app.app_layer.interfaces.repos.account.dto import AccountView
+from app.app_layer.interfaces.repos.account.dto import AccountViewDTO
 from app.app_layer.interfaces.security.password_cipher.interface import IPasswordCipher
 from app.domain.entities.account.account import AccountEntity
 from app.domain.entities.account.account_settings import AccountSettingsEntity
@@ -78,15 +78,13 @@ def to_account_view(
     ssau_identity: SsauIdentityModel | None,
     ssau_profile: SsauProfileModel | None,
     cipher: IPasswordCipher,
-) -> AccountView:
-    return AccountView(
+) -> AccountViewDTO:
+    return AccountViewDTO(
         account=account_to_entity(account),
         telegram=telegram_to_entity(telegram),
         settings=settings_to_entity(settings),
         ssau_identity=(
             ssau_identity_to_entity(ssau_identity, cipher) if ssau_identity is not None else None
         ),
-        ssau_profile=(
-            ssau_profile_to_entity(ssau_profile) if ssau_profile is not None else None
-        ),
+        ssau_profile=(ssau_profile_to_entity(ssau_profile) if ssau_profile is not None else None),
     )

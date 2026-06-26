@@ -1,8 +1,8 @@
 import asyncio
 
-from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResult
-from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatus
-from app.app_layer.interfaces.use_cases.check_telegram_chats.dto.input import (
+from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResultDTO
+from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatusEnum
+from app.app_layer.interfaces.use_cases.check_telegram_chats.dto import (
     CheckTelegramChatsUseCaseInputDTO,
 )
 from app.app_layer.use_cases.check_telegram_chats import CheckTelegramChatsUseCase
@@ -24,15 +24,15 @@ class FakeAccountRepository:
 
 
 class FakeTelegramChatChecker:
-    def __init__(self, statuses: dict[int, TelegramChatCheckStatus]) -> None:
+    def __init__(self, statuses: dict[int, TelegramChatCheckStatusEnum]) -> None:
         self._statuses = statuses
         self.checked: list[int] = []
 
-    async def check(self, chat_id: int) -> TelegramChatCheckResult:
+    async def check(self, chat_id: int) -> TelegramChatCheckResultDTO:
         self.checked.append(chat_id)
-        return TelegramChatCheckResult(
+        return TelegramChatCheckResultDTO(
             chat_id=chat_id,
-            status=self._statuses.get(chat_id, TelegramChatCheckStatus.REACHABLE),
+            status=self._statuses.get(chat_id, TelegramChatCheckStatusEnum.REACHABLE),
         )
 
 
@@ -53,9 +53,9 @@ def test_check_telegram_chats_deduplicates_input_and_builds_summary() -> None:
         account_repo = FakeAccountRepository(chat_ids=[])
         checker = FakeTelegramChatChecker(
             statuses={
-                2: TelegramChatCheckStatus.NOT_FOUND,
-                3: TelegramChatCheckStatus.FORBIDDEN,
-                4: TelegramChatCheckStatus.FAILED,
+                2: TelegramChatCheckStatusEnum.NOT_FOUND,
+                3: TelegramChatCheckStatusEnum.FORBIDDEN,
+                4: TelegramChatCheckStatusEnum.FAILED,
             }
         )
         use_case = CheckTelegramChatsUseCase(
@@ -64,9 +64,7 @@ def test_check_telegram_chats_deduplicates_input_and_builds_summary() -> None:
             chat_checker=checker,
         )
 
-        result = await use_case.execute(
-            CheckTelegramChatsUseCaseInputDTO(chat_ids=[1, 2, 2, 3, 4])
-        )
+        result = await use_case.execute(CheckTelegramChatsUseCaseInputDTO(chat_ids=[1, 2, 2, 3, 4]))
 
         assert checker.checked == [1, 2, 3, 4]
         assert account_repo.list_all_called is False

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.telegram.renderer.dto import RenderedTelegramMessage
-from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkup
+from app.app_layer.interfaces.telegram.renderer.dto import RenderedTelegramMessageDTO
+from app.app_layer.interfaces.telegram.sender.dto import TelegramReplyMarkupDTO
 
 
 class ITelegramMessageSender(ABC):
@@ -9,8 +9,8 @@ class ITelegramMessageSender(ABC):
     async def send(
         self,
         chat_id: int,
-        message: RenderedTelegramMessage,
+        message: RenderedTelegramMessageDTO,
         *,
-        reply_markup: TelegramReplyMarkup | None = None,
+        reply_markup: TelegramReplyMarkupDTO | None = None,
     ) -> None:
         raise NotImplementedError

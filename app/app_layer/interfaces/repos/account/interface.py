@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from app.app_layer.interfaces.repos.account.dto import (
     AccountSettingsCreateDTO,
     AccountSettingsUpdateDTO,
-    AccountView,
+    AccountViewDTO,
     SsauIdentityCreateDTO,
     SsauIdentityUpdateDTO,
     SsauProfileCreateDTO,
@@ -28,16 +28,16 @@ class IAccountRepository(ABC):
     # --- составное чтение ---
 
     @abstractmethod
-    async def get_by_chat_id(self, chat_id: int) -> AccountView | None:
+    async def get_by_chat_id(self, chat_id: int) -> AccountViewDTO | None:
         raise NotImplementedError
 
     @abstractmethod
-    async def list_notifiable(self) -> list[AccountView]:
+    async def list_notifiable(self) -> list[AccountViewDTO]:
         """Аккаунты с включёнными уведомлениями, у которых есть identity и профиль."""
         raise NotImplementedError
 
     @abstractmethod
-    async def list_all(self) -> list[AccountView]:
+    async def list_all(self) -> list[AccountViewDTO]:
         """Все аккаунты системы (для админских ручек)."""
         raise NotImplementedError
 

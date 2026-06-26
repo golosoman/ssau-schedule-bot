@@ -1,21 +1,19 @@
 from datetime import date
 
-from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeekDTO
 from app.app_layer.interfaces.cache.schedule.interface import IScheduleCacheStore
 from app.app_layer.interfaces.http.ssau.api.interface import ISsauApiClient
-from app.app_layer.interfaces.repos.account.dto import AccountView
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+from app.app_layer.interfaces.repos.account.dto import AccountViewDTO
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto import (
     ScheduleSyncForUserInputDTO,
-    ScheduleSyncIfStaleInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.output import (
     ScheduleSyncForUserOutputDTO,
+    ScheduleSyncIfStaleInputDTO,
     ScheduleSyncIfStaleOutputDTO,
 )
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
 )
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+from app.app_layer.interfaces.services.schedule.week_calculator.dto import (
     WeekCalculatorServiceInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (
@@ -61,7 +59,7 @@ class ScheduleSyncService(IScheduleSyncService):
         fresh = await self._fetch_and_store(account, week_number)
         return ScheduleSyncIfStaleOutputDTO(cache=fresh)
 
-    def _week_number(self, account: AccountView, target_date: date) -> int:
+    def _week_number(self, account: AccountViewDTO, target_date: date) -> int:
         if account.ssau_profile is None:
             raise ValueError("User SSAU profile is required to sync schedule.")
         return self._week_calculator.get_week_number(
@@ -71,7 +69,7 @@ class ScheduleSyncService(IScheduleSyncService):
             )
         ).week_number
 
-    async def _fetch_and_store(self, account: AccountView, week_number: int) -> CachedWeek:
+    async def _fetch_and_store(self, account: AccountViewDTO, week_number: int) -> CachedWeekDTO:
         if account.ssau_identity is None or account.ssau_profile is None:
             raise ValueError("Credentials and SSAU profile are required to sync schedule.")
         lessons = await self._provider.fetch_week_schedule(
@@ -82,6 +80,6 @@ class ScheduleSyncService(IScheduleSyncService):
             user_type=account.ssau_profile.user_type,
             week_number=week_number,
         )
-        cache = CachedWeek(fetched_at=self._clock.now(), lessons=lessons)
+        cache = CachedWeekDTO(fetched_at=self._clock.now(), lessons=lessons)
         await self._cache_store.set(account.account_id, week_number, cache)
         return cache

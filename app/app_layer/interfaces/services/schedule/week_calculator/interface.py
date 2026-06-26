@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+from app.app_layer.interfaces.services.schedule.week_calculator.dto import (
     WeekCalculatorServiceInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.output import (
     WeekCalculatorServiceOutputDTO,
 )
 

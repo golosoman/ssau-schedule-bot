@@ -3,17 +3,17 @@ from datetime import UTC, date, datetime, time
 
 import pytest
 
-from app.app_layer.interfaces.cache.schedule.dto import CachedWeek
+from app.app_layer.interfaces.cache.schedule.dto import CachedWeekDTO
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
-from app.app_layer.interfaces.repos.account.dto import AccountView
-from app.app_layer.interfaces.services.notifications.notification_planner.dto.input import (
+from app.app_layer.interfaces.repos.account.dto import AccountViewDTO
+from app.app_layer.interfaces.services.notifications.notification_planner.dto import (
     NotificationPlannerCollectDueInputDTO,
     NotificationPlannerMarkSentInputDTO,
 )
-from app.app_layer.interfaces.services.notifications.notification_service.dto.input import (
+from app.app_layer.interfaces.services.notifications.notification_service.dto import (
     NotificationServiceInputDTO,
 )
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+from app.app_layer.interfaces.services.schedule.week_calculator.dto import (
     WeekCalculatorServiceInputDTO,
 )
 from app.app_layer.services.notifications.notification_planner import NotificationPlanner
@@ -30,7 +30,7 @@ from app.domain.messages.base import TelegramMessage
 from app.domain.messages.notification import NotificationMessage
 from app.domain.value_objects.group_id import GroupId
 from app.domain.value_objects.lesson_time import LessonTime
-from app.domain.value_objects.notification_type import NotificationType
+from app.domain.value_objects.notification_type import NotificationTypeEnum
 from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.timezone import Timezone
 from app.domain.value_objects.year_id import YearId
@@ -38,23 +38,36 @@ from app.domain.value_objects.year_id import YearId
 _NOW = datetime(2025, 9, 1, tzinfo=UTC)
 
 
-def _make_account(account_id: int = 1, chat_id: int = 111) -> AccountView:
-    return AccountView(
+def _make_account(account_id: int = 1, chat_id: int = 111) -> AccountViewDTO:
+    return AccountViewDTO(
         account=AccountEntity(id=account_id, created_at=_NOW, updated_at=_NOW),
         telegram=TelegramIdentityEntity(
-            id=1, created_at=_NOW, updated_at=_NOW,
-            account_id=account_id, chat_id=chat_id, display_name="tester",
+            id=1,
+            created_at=_NOW,
+            updated_at=_NOW,
+            account_id=account_id,
+            chat_id=chat_id,
+            display_name="tester",
         ),
         settings=AccountSettingsEntity(
-            id=1, created_at=_NOW, updated_at=_NOW,
-            account_id=account_id, schedule_notifications_enabled=True,
+            id=1,
+            created_at=_NOW,
+            updated_at=_NOW,
+            account_id=account_id,
+            schedule_notifications_enabled=True,
         ),
         ssau_identity=SsauIdentityEntity(
-            id=1, created_at=_NOW, updated_at=_NOW,
-            account_id=account_id, login="login", password="pass",
+            id=1,
+            created_at=_NOW,
+            updated_at=_NOW,
+            account_id=account_id,
+            login="login",
+            password="pass",
         ),
         ssau_profile=SsauProfileEntity(
-            id=1, created_at=_NOW, updated_at=_NOW,
+            id=1,
+            created_at=_NOW,
+            updated_at=_NOW,
             ssau_identity_id=1,
             group_id=GroupId(value=755932538),
             year_id=YearId(value=14),
@@ -68,25 +81,25 @@ def _make_account(account_id: int = 1, chat_id: int = 111) -> AccountView:
 
 class FakeScheduleCacheStore:
     def __init__(self) -> None:
-        self._store: dict[tuple[int, int], CachedWeek] = {}
+        self._store: dict[tuple[int, int], CachedWeekDTO] = {}
 
-    async def get(self, account_id: int, week_number: int) -> CachedWeek | None:
+    async def get(self, account_id: int, week_number: int) -> CachedWeekDTO | None:
         return self._store.get((account_id, week_number))
 
-    async def set(self, account_id: int, week_number: int, week: CachedWeek) -> None:
+    async def set(self, account_id: int, week_number: int, week: CachedWeekDTO) -> None:
         self._store[(account_id, week_number)] = week
 
 
 class FakeNotificationLogRepository:
     def __init__(self) -> None:
-        self._sent: set[tuple[int, int, date, NotificationType]] = set()
+        self._sent: set[tuple[int, int, date, NotificationTypeEnum]] = set()
 
     async def was_sent(
         self,
         account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: NotificationType,
+        notification_type: NotificationTypeEnum,
     ) -> bool:
         return (account_id, lesson_id, lesson_date, notification_type) in self._sent
 
@@ -95,7 +108,7 @@ class FakeNotificationLogRepository:
         account_id: int,
         lesson_id: int,
         lesson_date: date,
-        notification_type: NotificationType,
+        notification_type: NotificationTypeEnum,
         sent_at: datetime,
     ) -> None:
         self._sent.add((account_id, lesson_id, lesson_date, notification_type))
@@ -163,7 +176,7 @@ def test_notification_service_sends_due_lesson_and_marks_it_sent() -> None:
         await cache_store.set(
             account.account_id,
             week_number,
-            CachedWeek(fetched_at=now_utc, lessons=[lesson]),
+            CachedWeekDTO(fetched_at=now_utc, lessons=[lesson]),
         )
 
         notifier = FakeNotifier()
@@ -204,13 +217,19 @@ async def test_collect_due_and_mark_sent() -> None:
     now_local = now_utc.astimezone(Timezone(value="Europe/Samara").tzinfo())
     week_number = _week_number(week_calculator, now_local.date())
     lesson = Lesson(
-        id=10, type="Лекция", subject="Math", teacher="Ivanov",
-        weekday=now_local.isoweekday(), week_numbers=[week_number],
+        id=10,
+        type="Лекция",
+        subject="Math",
+        teacher="Ivanov",
+        weekday=now_local.isoweekday(),
+        week_numbers=[week_number],
         time=LessonTime(start=time(10, 0), end=time(11, 0)),
-        is_online=False, conference_url=None, subgroup=None,
+        is_online=False,
+        conference_url=None,
+        subgroup=None,
     )
     await cache_store.set(
-        account.account_id, week_number, CachedWeek(fetched_at=now_utc, lessons=[lesson])
+        account.account_id, week_number, CachedWeekDTO(fetched_at=now_utc, lessons=[lesson])
     )
     due = (
         await planner.collect_due(
@@ -218,7 +237,7 @@ async def test_collect_due_and_mark_sent() -> None:
         )
     ).notifications
     assert len(due) == 1
-    assert due[0].notification_type == NotificationType.BEFORE_START
+    assert due[0].notification_type == NotificationTypeEnum.BEFORE_START
 
     await planner.mark_sent(
         NotificationPlannerMarkSentInputDTO(notification=due[0], sent_at=now_utc)
@@ -243,13 +262,19 @@ async def test_collect_due_sends_start_notification_once() -> None:
     pre_start_local = pre_start_utc.astimezone(Timezone(value="Europe/Samara").tzinfo())
     week_number = _week_number(week_calculator, pre_start_local.date())
     lesson = Lesson(
-        id=10, type="Лекция", subject="Math", teacher="Ivanov",
-        weekday=pre_start_local.isoweekday(), week_numbers=[week_number],
+        id=10,
+        type="Лекция",
+        subject="Math",
+        teacher="Ivanov",
+        weekday=pre_start_local.isoweekday(),
+        week_numbers=[week_number],
         time=LessonTime(start=time(10, 0), end=time(11, 0)),
-        is_online=False, conference_url=None, subgroup=None,
+        is_online=False,
+        conference_url=None,
+        subgroup=None,
     )
     await cache_store.set(
-        account.account_id, week_number, CachedWeek(fetched_at=pre_start_utc, lessons=[lesson])
+        account.account_id, week_number, CachedWeekDTO(fetched_at=pre_start_utc, lessons=[lesson])
     )
     before_start_due = (
         await planner.collect_due(
@@ -257,11 +282,9 @@ async def test_collect_due_sends_start_notification_once() -> None:
         )
     ).notifications
     assert len(before_start_due) == 1
-    assert before_start_due[0].notification_type == NotificationType.BEFORE_START
+    assert before_start_due[0].notification_type == NotificationTypeEnum.BEFORE_START
     await planner.mark_sent(
-        NotificationPlannerMarkSentInputDTO(
-            notification=before_start_due[0], sent_at=pre_start_utc
-        )
+        NotificationPlannerMarkSentInputDTO(notification=before_start_due[0], sent_at=pre_start_utc)
     )
 
     lesson_start_utc = datetime(2025, 9, 1, 6, 0, tzinfo=UTC)
@@ -271,12 +294,10 @@ async def test_collect_due_sends_start_notification_once() -> None:
         )
     ).notifications
     assert len(at_start_due) == 1
-    assert at_start_due[0].notification_type == NotificationType.AT_START
+    assert at_start_due[0].notification_type == NotificationTypeEnum.AT_START
 
     await planner.mark_sent(
-        NotificationPlannerMarkSentInputDTO(
-            notification=at_start_due[0], sent_at=lesson_start_utc
-        )
+        NotificationPlannerMarkSentInputDTO(notification=at_start_due[0], sent_at=lesson_start_utc)
     )
     at_start_due_again = (
         await planner.collect_due(

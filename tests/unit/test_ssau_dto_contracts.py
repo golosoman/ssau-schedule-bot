@@ -1,13 +1,12 @@
 from datetime import time
 
-from app.app_layer.interfaces.http.ssau.api.dto.profile import GroupDto, UnifiedYearDto
-from app.app_layer.interfaces.http.ssau.api.dto.schedule import ScheduleResponseDto
+from app.app_layer.interfaces.http.ssau.api.dto import GroupDTO, ScheduleResponseDTO, UnifiedYearDTO
 from app.infra.clients.ssau.api.mapper import map_schedule
 
 
 def test_profile_dtos_parse() -> None:
     group_payload = {"id": 755932538, "name": "6132-020402D"}
-    group = GroupDto.model_validate(group_payload)
+    group = GroupDTO.model_validate(group_payload)
     assert group.id == 755932538
     assert group.name == "6132-020402D"
 
@@ -20,7 +19,7 @@ def test_profile_dtos_parse() -> None:
         "isCurrent": True,
         "isElongated": False,
     }
-    year = UnifiedYearDto.model_validate(year_payload)
+    year = UnifiedYearDTO.model_validate(year_payload)
     assert year.id == 14
     assert year.year == 2025
     assert year.start_date.isoformat() == "2025-09-01"
@@ -44,7 +43,7 @@ def test_schedule_mapping() -> None:
             }
         ]
     }
-    dto = ScheduleResponseDto.model_validate(payload)
+    dto = ScheduleResponseDTO.model_validate(payload)
     lessons = map_schedule(dto)
     assert len(lessons) == 1
     lesson = lessons[0]

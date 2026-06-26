@@ -1,8 +1,6 @@
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
-from app.app_layer.interfaces.use_cases.send_admin_message.dto.input import (
+from app.app_layer.interfaces.use_cases.send_admin_message.dto import (
     SendAdminMessageUseCaseInputDTO,
-)
-from app.app_layer.interfaces.use_cases.send_admin_message.dto.output import (
     SendAdminMessageUseCaseOutputDTO,
 )
 from app.app_layer.interfaces.use_cases.send_admin_message.interface import (

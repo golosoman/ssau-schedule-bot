@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 import app.api.events.telegram.handlers as handlers_package
@@ -38,7 +39,7 @@ async def run_bot() -> None:
     wiring_params = {"packages": [handlers_package, commands_package]}
     async with di_scope(wiring_params=wiring_params) as container:
         bot = await resolve_resource(container.telegram.bot)
-        dispatcher = Dispatcher()
+        dispatcher = Dispatcher(storage=MemoryStorage())
         dispatcher.message.middleware(RequestIdMiddleware())
         dispatcher.include_router(handlers_router)
 

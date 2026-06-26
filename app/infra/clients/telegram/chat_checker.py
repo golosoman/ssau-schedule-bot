@@ -5,8 +5,8 @@ from aiogram.exceptions import (
     TelegramRetryAfter,
 )
 
-from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResult
-from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatus
+from app.app_layer.interfaces.telegram.chat_checker.dto import TelegramChatCheckResultDTO
+from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatusEnum
 from app.app_layer.interfaces.telegram.chat_checker.interface import ITelegramChatChecker
 from app.infra.clients.telegram.interface import ITelegramBot
 from app.infra.retry import RetryPolicy, retry_async
@@ -20,7 +20,7 @@ class TelegramChatChecker(ITelegramChatChecker):
         self._bot = bot
         self._retry_policy = retry_policy
 
-    async def check(self, chat_id: int) -> TelegramChatCheckResult:
+    async def check(self, chat_id: int) -> TelegramChatCheckResultDTO:
         async def _operation() -> None:
             await self._bot.get_chat(chat_id)
 
@@ -43,34 +43,34 @@ class TelegramChatChecker(ITelegramChatChecker):
                 on_retry=_on_retry,
             )
         except TelegramForbiddenError as exc:
-            return TelegramChatCheckResult(
+            return TelegramChatCheckResultDTO(
                 chat_id=chat_id,
-                status=TelegramChatCheckStatus.FORBIDDEN,
+                status=TelegramChatCheckStatusEnum.FORBIDDEN,
                 detail=_exception_detail(exc),
             )
         except TelegramBadRequest as exc:
             detail = _exception_detail(exc)
             if "chat not found" in detail.lower():
-                return TelegramChatCheckResult(
+                return TelegramChatCheckResultDTO(
                     chat_id=chat_id,
-                    status=TelegramChatCheckStatus.NOT_FOUND,
+                    status=TelegramChatCheckStatusEnum.NOT_FOUND,
                     detail=detail,
                 )
-            return TelegramChatCheckResult(
+            return TelegramChatCheckResultDTO(
                 chat_id=chat_id,
-                status=TelegramChatCheckStatus.FAILED,
+                status=TelegramChatCheckStatusEnum.FAILED,
                 detail=detail,
             )
         except Exception as exc:
             logger.exception("Telegram getChat failed for chat %s.", chat_id)
-            return TelegramChatCheckResult(
+            return TelegramChatCheckResultDTO(
                 chat_id=chat_id,
-                status=TelegramChatCheckStatus.FAILED,
+                status=TelegramChatCheckStatusEnum.FAILED,
                 detail=_exception_detail(exc),
             )
-        return TelegramChatCheckResult(
+        return TelegramChatCheckResultDTO(
             chat_id=chat_id,
-            status=TelegramChatCheckStatus.REACHABLE,
+            status=TelegramChatCheckStatusEnum.REACHABLE,
         )
 
 

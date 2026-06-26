@@ -176,7 +176,7 @@ class NextJsLoginScraper:
             except json.JSONDecodeError:
                 continue
             yield payload
-            if isinstance(payload, str) and "\\\"" in payload:
+            if isinstance(payload, str) and '\\"' in payload:
                 try:
                     yield bytes(payload, "utf-8").decode("unicode_escape")
                 except UnicodeDecodeError:

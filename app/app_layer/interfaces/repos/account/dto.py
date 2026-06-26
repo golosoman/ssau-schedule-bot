@@ -12,7 +12,7 @@ from app.domain.value_objects.subgroup import Subgroup
 from app.domain.value_objects.year_id import YearId
 
 
-class AccountView(BaseModel):
+class AccountViewDTO(BaseModel):
     """Составное чтение аккаунта: корень + идентичности + настройки (+ профиль)."""
 
     model_config = ConfigDict(frozen=True)

@@ -1,11 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatus
+from app.app_layer.interfaces.telegram.chat_checker.enums import TelegramChatCheckStatusEnum
 
 
-class TelegramChatCheckResult(BaseModel):
+class TelegramChatCheckResultDTO(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     chat_id: int
-    status: TelegramChatCheckStatus
+    status: TelegramChatCheckStatusEnum
     detail: str | None = None

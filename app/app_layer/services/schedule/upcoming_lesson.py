@@ -1,10 +1,8 @@
 from datetime import datetime, timedelta
 
-from app.app_layer.interfaces.schedule.upcoming_lesson.dto import UpcomingLesson
-from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.input import (
+from app.app_layer.interfaces.schedule.upcoming_lesson.dto import UpcomingLessonDTO
+from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto import (
     UpcomingLessonServiceInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.upcoming_lesson.dto.output import (
     UpcomingLessonServiceOutputDTO,
 )
 from app.app_layer.interfaces.services.schedule.upcoming_lesson.interface import (
@@ -24,7 +22,7 @@ class UpcomingLessonService(IUpcomingLessonService):
         week_number = input_dto.week_number
         subgroup = input_dto.subgroup
 
-        candidates: list[UpcomingLesson] = []
+        candidates: list[UpcomingLessonDTO] = []
         today = now_local.date()
         tz = now_local.tzinfo
 
@@ -41,7 +39,7 @@ class UpcomingLessonService(IUpcomingLessonService):
                 start_at = datetime.combine(target_date, lesson.time.start, tzinfo=tz)
                 if start_at < now_local:
                     continue
-                candidates.append(UpcomingLesson(lesson=lesson, start_at=start_at))
+                candidates.append(UpcomingLessonDTO(lesson=lesson, start_at=start_at))
 
         if not candidates:
             return UpcomingLessonServiceOutputDTO(upcoming_lesson=None)

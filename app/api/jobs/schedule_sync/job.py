@@ -6,13 +6,13 @@ from dependency_injector.wiring import Provide, inject
 from app.api.jobs.utils import send_alert
 from app.app_layer.interfaces.notifications.notifier.interface import INotifier
 from app.app_layer.interfaces.repos.account.interface import IAccountRepository
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto import (
     ScheduleSyncForUserInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.schedule_sync.interface import (
     IScheduleSyncService,
 )
-from app.app_layer.interfaces.services.schedule.week_calculator.dto.input import (
+from app.app_layer.interfaces.services.schedule.week_calculator.dto import (
     WeekCalculatorServiceInputDTO,
 )
 from app.app_layer.interfaces.services.schedule.week_calculator.interface import (

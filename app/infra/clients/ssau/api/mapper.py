@@ -1,9 +1,9 @@
-from app.app_layer.interfaces.http.ssau.api.dto.schedule import ScheduleResponseDto
+from app.app_layer.interfaces.http.ssau.api.dto import ScheduleResponseDTO
 from app.domain.entities.lesson import Lesson
 from app.domain.value_objects.lesson_time import LessonTime
 
 
-def map_schedule(data: ScheduleResponseDto) -> list[Lesson]:
+def map_schedule(data: ScheduleResponseDTO) -> list[Lesson]:
     lessons: list[Lesson] = []
 
     for item in data.lessons:

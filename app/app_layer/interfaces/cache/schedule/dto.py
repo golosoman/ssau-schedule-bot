@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from app.domain.entities.lesson import Lesson
 
 
-class CachedWeek(BaseModel):
+class CachedWeekDTO(BaseModel):
     """Значение кэша расписания на неделю (хранится в Valkey под TTL)."""
 
     model_config = ConfigDict(frozen=True)

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.app_layer.interfaces.repos.account.dto import (
     AccountSettingsCreateDTO,
     AccountSettingsUpdateDTO,
-    AccountView,
+    AccountViewDTO,
     SsauIdentityCreateDTO,
     SsauIdentityUpdateDTO,
     SsauProfileCreateDTO,
@@ -46,17 +46,15 @@ class SqlAlchemyAccountRepository(BaseSqlAlchemyRepository, IAccountRepository):
 
     # --- составное чтение ---
 
-    async def get_by_chat_id(self, chat_id: int) -> AccountView | None:
+    async def get_by_chat_id(self, chat_id: int) -> AccountViewDTO | None:
         telegram = await self._session.scalar(
-            select(TelegramIdentityModel).where(
-                TelegramIdentityModel.telegram_chat_id == chat_id
-            )
+            select(TelegramIdentityModel).where(TelegramIdentityModel.telegram_chat_id == chat_id)
         )
         if telegram is None:
             return None
         return await self._load_view(telegram.account_id, telegram=telegram)
 
-    async def list_notifiable(self) -> list[AccountView]:
+    async def list_notifiable(self) -> list[AccountViewDTO]:
         stmt = (
             select(
                 AccountModel,
@@ -84,7 +82,7 @@ class SqlAlchemyAccountRepository(BaseSqlAlchemyRepository, IAccountRepository):
             for account, telegram, settings, ssau_identity, ssau_profile in rows
         ]
 
-    async def list_all(self) -> list[AccountView]:
+    async def list_all(self) -> list[AccountViewDTO]:
         stmt = (
             select(
                 AccountModel,
@@ -117,15 +115,13 @@ class SqlAlchemyAccountRepository(BaseSqlAlchemyRepository, IAccountRepository):
         account_id: int,
         *,
         telegram: TelegramIdentityModel | None = None,
-    ) -> AccountView:
+    ) -> AccountViewDTO:
         account = await self._session.get(AccountModel, account_id)
         if account is None:
             raise RuntimeError(f"Account {account_id} not found.")
         if telegram is None:
             telegram = await self._session.scalar(
-                select(TelegramIdentityModel).where(
-                    TelegramIdentityModel.account_id == account_id
-                )
+                select(TelegramIdentityModel).where(TelegramIdentityModel.account_id == account_id)
             )
         if telegram is None:
             raise RuntimeError(f"Telegram identity for account {account_id} not found.")

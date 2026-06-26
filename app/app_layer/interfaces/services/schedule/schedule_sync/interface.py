@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.input import (
+from app.app_layer.interfaces.services.schedule.schedule_sync.dto import (
     ScheduleSyncForUserInputDTO,
-    ScheduleSyncIfStaleInputDTO,
-)
-from app.app_layer.interfaces.services.schedule.schedule_sync.dto.output import (
     ScheduleSyncForUserOutputDTO,
+    ScheduleSyncIfStaleInputDTO,
     ScheduleSyncIfStaleOutputDTO,
 )
 
