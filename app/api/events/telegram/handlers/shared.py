@@ -40,8 +40,7 @@ def user_now(now_utc: datetime, timezone: Timezone) -> datetime:
 
 def build_status_message(account: AccountView) -> InfoMessage:
     profile = account.ssau_profile
-    group_label = str(profile.group_id.value) if profile is not None else "не определена"
-    year_label = str(profile.year_id.value) if profile is not None else "не определен"
+    group_label = profile.group_name if profile is not None else "не определена"
     subgroup_label = str(profile.subgroup) if profile is not None else "не определена"
     user_type_label = profile.user_type if profile is not None else "не определен"
     creds = "есть" if account.is_authed else "нет"
@@ -50,7 +49,6 @@ def build_status_message(account: AccountView) -> InfoMessage:
     )
     lines = [
         f"Группа: {group_label}",
-        f"Год: {year_label}",
         f"Подгруппа: {subgroup_label}",
         f"Тип: {user_type_label}",
         f"Уведомления: {notify_status}",
