@@ -1,28 +1,14 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.so
-.mypy_cache
+# Корневой .gitignore монорепо. У backend/ и frontend/ — свои .gitignore.
 
-# Poetry
-.venv/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
+# OS / editor
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.swp
 
-# dotenv
-.env
-envs/sensitive.env
-
-# db
-*.db
-
-# docs
-docs/
+# на всякий случай — артефакты сборки/зависимостей на любом уровне
+**/node_modules/
+**/dist/
+**/.venv/
+**/__pycache__/

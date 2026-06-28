@@ -1,0 +1,117 @@
+// Отдельная Jenkins-джоба для фронтенда (Script Path: frontend/Jenkinsfile).
+// CI: npm ci -> lint -> typecheck -> test -> build (в node-контейнере).
+// Deploy (main): атомарно публикует dist в каталог, который раздаёт host-nginx.
+//
+// Multibranch НЕ требуется — это отдельная Pipeline-джоба того же монорепо.
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_PARENT_DIR = "/opt/apps"
+    APP_DIR = "/opt/apps/ssau-schedule-bot"
+    FRONTEND_DIR = "/opt/apps/ssau-schedule-bot/frontend"
+    REPO_URL = "https://github.com/golosoman/ssau-schedule-bot.git"
+    DEPLOY_BRANCH = "main"
+    NODE_IMAGE = "node:22-alpine"
+    // Каталог, который раздаёт host-nginx (см. frontend/deploy/nginx.conf.example).
+    DEPLOY_DIR = "/opt/apps/ssau-schedule-frontend/current"
+    // Сборочная база API: относительный /api — host-nginx проксирует на backend
+    // (единый origin, CORS не нужен).
+    VITE_API_BASE_URL = "/api"
+  }
+
+  stages {
+    stage('Checkout (для статуса)') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Sync Repo On Host') {
+      steps {
+        sh '''#!/usr/bin/env bash
+          set -euo pipefail
+
+          echo "Sync repo on host path: ${APP_DIR}"
+          docker run --rm \
+            --entrypoint /bin/sh \
+            -e APP_DIR="${APP_DIR}" \
+            -e REPO_URL="${REPO_URL}" \
+            -e DEPLOY_BRANCH="${DEPLOY_BRANCH}" \
+            -v "${APP_PARENT_DIR}:${APP_PARENT_DIR}" \
+            alpine/git:latest -euxc '
+              if [ ! -d "${APP_DIR}/.git" ]; then
+                git clone "${REPO_URL}" "${APP_DIR}"
+              fi
+
+              cd "${APP_DIR}"
+              git fetch --all --prune
+              git checkout "${DEPLOY_BRANCH}"
+              git reset --hard "origin/${DEPLOY_BRANCH}"
+            '
+        '''
+      }
+    }
+
+    stage('CI: install + lint + typecheck + test + build') {
+      steps {
+        sh '''#!/usr/bin/env bash
+          set -euo pipefail
+
+          docker run --rm \
+            -e VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
+            -e npm_config_cache=/tmp/.npm \
+            -v "${APP_PARENT_DIR}:${APP_PARENT_DIR}" \
+            -w "${FRONTEND_DIR}" \
+            "${NODE_IMAGE}" sh -euxc '
+              npm ci
+              npm run lint
+              npm run typecheck
+              npm test
+              npm run build
+            '
+        '''
+      }
+    }
+
+    stage('Deploy (main only)') {
+      when {
+        expression {
+          // In a regular Pipeline job BRANCH_NAME is usually absent; the job SCM
+          // branch is the deploy guard. In Multibranch, deploy only main.
+          env.BRANCH_NAME == null ||
+            env.BRANCH_NAME == env.DEPLOY_BRANCH ||
+            env.GIT_BRANCH == env.DEPLOY_BRANCH ||
+            env.GIT_BRANCH == "origin/${env.DEPLOY_BRANCH}"
+        }
+      }
+      steps {
+        // Шаг выполняется в контейнере Jenkins, где /opt/apps примонтирован,
+        // поэтому файловые операции идут напрямую. Публикация атомарная (swap).
+        sh '''#!/usr/bin/env bash
+          set -euo pipefail
+
+          mkdir -p "$(dirname "${DEPLOY_DIR}")"
+          staging="${DEPLOY_DIR}.new"
+          previous="${DEPLOY_DIR}.old"
+
+          rm -rf "${staging}"
+          cp -a "${FRONTEND_DIR}/dist" "${staging}"
+
+          rm -rf "${previous}"
+          if [ -d "${DEPLOY_DIR}" ]; then
+            mv "${DEPLOY_DIR}" "${previous}"
+          fi
+          mv "${staging}" "${DEPLOY_DIR}"
+
+          echo "Frontend deployed to ${DEPLOY_DIR}"
+        '''
+      }
+    }
+  }
+}
