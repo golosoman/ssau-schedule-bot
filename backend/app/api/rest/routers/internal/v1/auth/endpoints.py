@@ -1,16 +1,13 @@
 from typing import Annotated
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.api.rest.routers.internal.v1.auth.schemas import (
     V1AuthSsauInputSchema,
     V1AuthSsauOutputSchema,
 )
-from app.app_layer.interfaces.security.state_token.errors import (
-    BaseStateTokenError,
-    ExpiredStateTokenError,
-)
+from app.api.rest.security.state_token import verify_state_token
 from app.app_layer.interfaces.security.state_token.interface import IStateTokenService
 from app.app_layer.interfaces.use_cases.authenticate_user.dto import (
     AuthenticateUserUseCaseInputDTO,
@@ -37,19 +34,7 @@ async def authenticate_ssau(
 ) -> V1AuthSsauOutputSchema:
     """Авторизация СНИУ с веб-страницы: проверяем state-токен (привязка к Telegram),
     сохраняем доступ и подтягиваем профиль через ``AuthenticateUserUseCase``."""
-    try:
-        chat_id = state_token_service.verify(body.token)
-    except ExpiredStateTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Ссылка устарела. Запроси новую в боте: /auth",
-        ) from exc
-    except BaseStateTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Недействительная ссылка авторизации.",
-        ) from exc
-
+    chat_id = verify_state_token(state_token_service, body.token)
     result = await authenticate_use_case.execute(
         AuthenticateUserUseCaseInputDTO(chat_id=chat_id, login=body.login, password=body.password)
     )

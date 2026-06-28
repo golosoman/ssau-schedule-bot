@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from app.api.rest.auth.dependencies import require_admin_token
 from app.api.rest.routers.admin.v1.router import router as v1_router
+from app.api.rest.security.admin_token import require_admin_token
 
 router = APIRouter(
     prefix="/admin",
